@@ -1,0 +1,753 @@
+<title>QQQ 与 BTC 波浪结构</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one reading column; the chart is the page's centre of gravity, tabs switch asset, notes follow in two columns that stack on phones. */
+:root {
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --hair: rgba(11,11,11,0.10);
+  --price: #2a78d6;
+  --corr: #eb6834;
+  --corr-wash: rgba(235,104,52,0.10);
+  --pre-wash: rgba(11,11,11,0.035);
+  --time-wash: rgba(42,120,214,0.12);
+  --ok: #006300;
+  --font: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --hair: rgba(255,255,255,0.10);
+    --price: #3987e5; --corr: #d95926; --corr-wash: rgba(217,89,38,0.16); --pre-wash: rgba(255,255,255,0.035); --time-wash: rgba(57,135,229,0.20); --ok: #0ca30c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --hair: rgba(255,255,255,0.10);
+  --price: #3987e5; --corr: #d95926; --corr-wash: rgba(217,89,38,0.16); --pre-wash: rgba(255,255,255,0.035); --time-wash: rgba(57,135,229,0.20); --ok: #0ca30c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.65; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 28px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 22px; }
+h1 { font-size: 28px; line-height: 1.25; margin: 0; text-wrap: balance; letter-spacing: 0.01em; }
+h2 { font-size: 18px; margin: 0 0 8px; text-wrap: balance; }
+p { margin: 0; }
+.lede { color: var(--ink-2); max-width: 68ch; }
+.controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+.tabs { display: inline-flex; border: 1px solid var(--hair); border-radius: 8px; padding: 3px; background: var(--surface); }
+.tabs button { font: inherit; font-weight: 600; border: 0; background: transparent; color: var(--ink-2); padding: 6px 18px; border-radius: 6px; cursor: pointer; }
+.tabs button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.tabs.small button { padding: 4px 11px; font-size: 13.5px; }
+tr.lv0 td { font-weight: 650; }
+tr.lv2 td { color: var(--ink-2); font-size: 13px; }
+.tabs button:focus-visible, .toggle input:focus-visible { outline: 2px solid var(--price); outline-offset: 2px; }
+.toggle { display: inline-flex; gap: 6px; align-items: center; color: var(--ink-2); font-size: 14px; cursor: pointer; }
+.status { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.stat { background: var(--surface); border: 1px solid var(--hair); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.stat .k { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
+.stat .v { font-size: 20px; font-weight: 650; line-height: 1.3; }
+.stat .s { font-size: 13px; color: var(--ink-2); }
+.panel { background: var(--surface); border: 1px solid var(--hair); border-radius: 12px; padding: 14px 6px 10px; }
+.chart-scroll { overflow-x: auto; position: relative; }
+.chart-box { position: relative; min-width: 680px; }
+svg { display: block; width: 100%; height: auto; font-family: var(--font); }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--hair); border-radius: 8px; padding: 7px 10px; font-size: 13px; line-height: 1.45; box-shadow: 0 2px 10px rgba(0,0,0,0.12); white-space: nowrap; }
+.tip .d { color: var(--muted); font-variant-numeric: tabular-nums; }
+.tip .p { font-weight: 650; font-variant-numeric: tabular-nums; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 8px 12px 2px; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { display: inline-block; width: 18px; height: 0; border-top: 2px solid; }
+.legend svg { width: 12px; height: 12px; flex: none; }
+.cols { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 22px; }
+@media (max-width: 760px) { .cols { grid-template-columns: minmax(0, 1fr); } h1 { font-size: 23px; } }
+.card { background: var(--surface); border: 1px solid var(--hair); border-radius: 12px; padding: 16px 18px; min-width: 0; }
+ol.waves { margin: 0; padding-left: 1.4em; display: grid; gap: 8px; }
+ol.waves li::marker { font-weight: 650; color: var(--ink-2); }
+.levels { display: grid; gap: 10px; }
+.lv { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.lv b { font-variant-numeric: tabular-nums; }
+.tbl-scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: 0.04em; }
+td.n { text-align: right; font-variant-numeric: tabular-nums; }
+.pass { color: var(--ok); font-weight: 650; }
+.note { color: var(--ink-2); font-size: 14px; }
+.foot { color: var(--muted); font-size: 13px; }
+.h3 { font-size: 15px; margin: 0; }
+.wrap > *, .card > *, .cols > * { min-width: 0; }
+.lv.wide { grid-template-columns: 118px minmax(0, 1fr); }
+td.ongoing { color: var(--ink-2); font-style: normal; }
+.prog-head { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; justify-content: space-between; }
+.prog-summary { font-size: 16px; font-weight: 600; line-height: 1.6; }
+.tag { display: inline-block; font-size: 11.5px; font-weight: 650; padding: 0 6px; border-radius: 4px; border: 1px solid var(--hair); color: var(--ink-2); margin-right: 6px; white-space: nowrap; }
+.tag.key { color: var(--ink); border-color: var(--corr); }
+tr.here td { background: var(--time-wash); font-weight: 650; }
+tr.dyn td:first-child { font-weight: 650; }
+td.txt { white-space: normal; min-width: 12em; }
+.ev { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 10px; align-items: baseline; font-size: 14px; }
+.ev .d { color: var(--muted); font-variant-numeric: tabular-nums; }
+html.public .private { display: none !important; }
+.static-note { color: var(--muted); font-size: 13px; margin: -4px 0 8px; }
+tr.now td { font-weight: 650; }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:8px">
+    <h1>QQQ 与 BTC 的波浪结构</h1>
+    <p class="lede">日收盘价、对数坐标，从 2022 年底的熊市低点画起（波浪要从起点数），灰色竖线右边是近三年。这是事后对走势的描述，不是交易信号。</p>
+  </header>
+
+  <div class="controls">
+    <div class="tabs" role="group" aria-label="选择品种">
+      <button type="button" id="tab-qqq" data-asset="QQQ" aria-pressed="true">QQQ</button>
+      <button type="button" id="tab-btc" data-asset="BTC" aria-pressed="false">BTC</button>
+    </div>
+    <div class="tabs small" role="group" aria-label="浪的级别" id="deg"><button type="button" data-deg="0">大浪</button><button type="button" data-deg="1">中浪</button><button type="button" data-deg="2">小浪</button></div>
+    <div class="tabs small" role="group" aria-label="时间范围" id="rng"><button type="button" data-rng="all">全部</button><button type="button" data-rng="1y">近一年</button><button type="button" data-rng="6m">近半年</button><button type="button" data-rng="3m">近三月</button></div>
+    <label class="toggle" for="show-fib"><input type="checkbox" id="show-fib" checked> 回撤位与支撑区</label>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <section class="card prog" style="display:grid;gap:12px">
+    <div class="prog-head"><h2 style="margin:0">最新进度</h2><span class="foot" id="p-updated"></span></div>
+    <p class="prog-summary" id="p-summary"></p>
+    <p class="note" id="p-settled" hidden></p>
+    <div class="cols">
+      <div style="display:grid;gap:8px;align-content:start"><h3 class="h3">价位（按高低排列）</h3><div class="tbl-scroll"><table id="p-levels"></table></div></div>
+      <div style="display:grid;gap:14px;align-content:start">
+        <div style="display:grid;gap:8px"><h3 class="h3">时间位</h3><div id="p-marks" class="levels"></div></div>
+        <div style="display:grid;gap:8px"><h3 class="h3">最近的变化</h3><div id="p-events" class="levels"></div></div>
+      </div>
+    </div>
+    <p class="note" id="p-rule"></p>
+  </section>
+
+  <div class="panel">
+    <div class="chart-scroll"><div class="chart-box" id="chart-box"><svg id="chart" role="img" aria-label="波浪结构图"></svg><div class="tip" id="tip" hidden></div></div></div>
+    <p class="note" id="sub-hint" style="padding:0 12px"></p>
+    <div class="legend" id="legend">
+      <span><i class="sw" style="border-color:var(--price)"></i>日收盘价</span>
+      <span><i class="sw" style="border-color:var(--ink-2);border-top-width:1.5px"></i>大浪路径 0–5</span>
+      <span><i class="sw" style="border-color:var(--ink);border-top-width:1px;opacity:.7"></i>中浪 (i)–(v)、(a)–(c) / 小浪 i–v、a–c 路径</span>
+      <span><i class="sw" style="border-color:var(--corr)"></i>调整浪</span>
+      <span><i style="display:inline-block;width:18px;height:10px;background:var(--corr-wash);border-radius:2px"></i>支撑区</span>
+      <span><i class="sw" style="border-color:var(--muted);border-top-width:1px"></i>回撤位 / 失效线</span>
+    </div>
+  </div>
+
+  <div class="cols">
+    <section class="card"><h2>这一段怎么数</h2><p class="static-note">2026-11-21 写的解读，进度以上面“最新进度”为准。</p><ol class="waves" id="story"></ol></section>
+    <section class="card"><h2>接下来看哪些价位</h2><p class="static-note">2026-11-21 写的解读，进度以上面“最新进度”为准。</p><div class="levels" id="levels"></div></section>
+  </div>
+
+  <section class="card" style="display:grid;gap:14px">
+    <div style="display:grid;gap:6px">
+      <h2 style="margin:0">什么时候结束</h2>
+      <p class="note" id="t-lede"></p>
+      <p class="static-note" style="margin:0">图里的价格、时间位随进度自动更新；下面的文字和检验是 2026-11-21 做的。</p>
+    </div>
+    <div class="panel" style="padding-top:10px">
+      <div class="chart-scroll"><div class="chart-box" id="tchart-box" style="min-width:640px"><svg id="tchart" role="img" aria-label="时间窗口图"></svg><div class="tip" id="ttip" hidden></div></div></div>
+      <div class="legend" id="tlegend"></div>
+    </div>
+    <div class="cols">
+      <div style="display:grid;gap:10px;align-content:start"><h3 class="h3" id="t-h-proj"></h3><div class="levels" id="t-proj"></div></div>
+      <div style="display:grid;gap:10px;align-content:start"><h3 class="h3">这些时间比例过去准不准</h3><div class="note" id="t-check" style="display:grid;gap:8px"></div></div>
+    </div>
+    <div style="display:grid;gap:8px">
+      <h3 class="h3" id="t-h-eps"></h3>
+      <div class="tbl-scroll"><table id="t-eps"></table></div>
+      <p class="note" id="t-eps-note"></p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>每一浪的数据</h2>
+    <p class="note" id="wave-table-note" style="margin-bottom:8px"></p>
+    <div class="tbl-scroll"><table id="wave-table"></table></div>
+    <p class="note" style="margin-top:10px">中浪和小浪由程序自动划分：上涨或下跌的推动浪分成 5 个小浪，调整浪分成 3 个（a、c 段再按 5 个、b 段按 3 个细分）。在所有候选的转折点里，选回调幅度最大、同时满足三条铁律的分法：每个小浪是它那一段的最高或最低点，2 浪不跌破起点，4 浪不进入 1 浪区间，3 浪不是最短。按日收盘价划分，几天以内的小波动分不出来。</p>
+  </section>
+
+  <div class="cols">
+    <section class="card"><h2>三条铁律检查</h2><div class="tbl-scroll"><table id="rules"></table></div><p class="note" id="guides" style="margin-top:10px"></p></section>
+    <section class="card"><h2>另一种数法</h2><div id="alt" class="note" style="display:grid;gap:10px"></div></section>
+  </div>
+
+  <section class="card" style="display:grid;gap:8px">
+    <h2>怎么看这张图</h2>
+    <p class="note">波浪是事后数出来的。同一段走势常有两三种说得通的数法，只有关键价位被突破，才知道哪一种对。所以每个数法都附了“失效线”。</p>
+  </section>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<script id="series" type="application/json">__DATA__</script>
+<script>
+(function () {
+  const RAW = JSON.parse(document.getElementById('series').textContent);
+  if (window.WAVES_PUBLIC) document.documentElement.classList.add('public');
+  const fmtQ = v => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtB = v => Math.round(v).toLocaleString('en-US');
+  const ASSETS = {
+    QQQ: {
+      fmt: fmtQ, unit: '', yMin: 235, yMax: 830, ticks: [250, 300, 400, 500, 600, 700, 800], tickFmt: v => String(v),
+      big: [['2022-12-28', '0', 260.10, 'lo'], ['2023-07-18', '1', 385.74, 'hi'], ['2023-10-26', '2', 343.66, 'lo'], ['2025-02-19', '3', 539.52, 'hi'], ['2025-04-08', '4', 416.06, 'lo'], ['2026-10-06', '5', 759.66, 'hi']],
+      corr: [['2026-11-20', 'A?', 608.45, 'lo']],
+      lines: [[635.77, '已跌破 635.8'], [568.83, ''], [509.88, '50% 509.9'], [450.93, '61.8% 450.9']],
+      zone: [558.28, 577.77, '支撑区 558–578'], zoneFrom: '2025-04-08', zoneLabelAt: 'margin', zoneShort: '支撑区 558–578',
+      sold: null,
+      status: [
+        ['所处位置', 'A 浪的最后一段', 'a、b 已走完，c 段还在跌'],
+        ['距 10-06 高点', '−19.9%', '759.66 → 608.45（11-20 收盘）'],
+        ['回撤了整段涨幅', '30.3%', '260.10 → 759.66 这一段'],
+        ['第一支撑区', '558–578', '三种量度在这里重合'],
+        ['A 浪何时结束', '12 月上中旬', '时间窗 12-02 至 12-23，中位数 12-09'],
+      ],
+      timing: {
+        from: '2026-09-01', to: '2027-02-10', yMin: 540, yMax: 790, ticks: [550, 600, 650, 700, 750], tickFmt: v => String(v), monthEvery: 1,
+        path: [['2026-10-06', '5', 759.66, 'hi'], ['2026-11-05', 'a', 647.05, 'lo'], ['2026-11-11', 'b', 690.38, 'hi'], ['2026-11-20', 'A?', 608.45, 'lo']],
+        lines: [[690.38, 'b 顶 690.4'], [676.49, '确认线 676.5'], [635.77, '已跌破 635.8']],
+        zone: [558.28, 577.77, '支撑区'],
+        bands: [['2026-12-02', '2026-12-23', '历史比例的中间一半', 'A']],
+        marks: [['2026-11-23', 'A=4浪', 0], ['2026-12-02', 'c=0.618a', 1], ['2026-12-09', '中位数', 0], ['2026-12-14', 'c=a', 1], ['2027-01-05', 'c=1.618a', 1], ['2027-01-19', 'A-B-C≥2浪', 0]],
+        legend: [['band', 'A 浪时间：历史比例的中间一半'], ['mark', '时间位'], ['zone', '支撑区 558–578']],
+      },
+      tLede: '波浪理论用斐波那契比例来估时间，但时间比价格更难估。下面先按比例算出几个日期，再用 1985 年以来的纳指数据检验这些比例准不准，最后看过去跌到这个深度以后又走了多久。',
+      tProjTitle: 'A 浪的时间位（c 段从 11-11 开始，a 段用了 22 个交易日）',
+      tProj: [
+        ['11-23 前后', 'A 浪和 2025 年的 4 浪一样长（34 个交易日）。到 11-20 已经 33 个交易日，所以最早下周就可能见底。'],
+        ['12-02', 'c 段时长 = 0.618 × a 段。'],
+        ['12-14', 'c 段 = a 段。价格上 c = a 是 577.77，时间和价格在这里同时满足，是最值得注意的一个组合。'],
+        ['2027-01-05', 'c 段 = 1.618 × a 段。'],
+        ['12-02 至 12-23', '用历史分布代替固定比例：纳指 1985 年以来 69 次同类的“跌-涨-跌”里，只看 c 段已经走了至少 7 天的 58 次，c/a 的中间一半是 0.64–1.33 倍，对应这段日期，中位数 12-09。'],
+        ['2027-01-19 以后', '<b>整个调整</b>（A-B-C 全部走完）：这次修正的是 2022 年以来整段五浪，级别比 2 浪（71 个交易日）和 4 浪高，通常不会比它们短。从 10-06 数 71 个交易日是 2027-01-19。'],
+      ],
+      tCheck: [
+        '做法：把 1985 年至 2026-09 纳指所有“跌-涨-跌”三段（后一段的高点和低点都更低）找出来，看 c 段时长是否落在 a 段的 0.618、1 或 1.618 倍 ±15% 以内，再和把 c 段随机打乱配对的结果比较。',
+        '<b>5% 摆动</b>（69 次）：35% 落在比例附近，随机配对 25%（p = 0.03）。<br><b>8% 摆动</b>（30 次）：30% 对 22%（p = 0.20）。<br><b>12% 摆动</b>（14 次）：36% 对 34%（p = 0.55）。',
+        '只有最小一级比随机略好，级别一大就看不出差别。c 段的时长从 a 段的 0.27 倍到 1.71 倍都很常见（10%–90% 分位）。所以上面的日期只能当成一个大致的时间窗，不能当成某一天。',
+      ],
+      tEpsTitle: '过去纳指从两年高点跌 19.9% 以上的 9 次',
+      tEpsNote: '9 次里有 6 次在第一次跌到 −19.9% 后 1–38 个交易日内见底，之后只多跌 1%–18%；另外 3 次（2000、2007、2021 年开始的那几次）演变成熊市，又走了 200–620 个交易日、多跌 20%–78%。这次属于哪一种，事前看不出来。用的是纳斯达克 100 指数，QQQ 跟踪的就是它。',
+      story: [
+        '<b>起点 0（2022-12-28，260.10）</b>：2022 年熊市在 10 月到 12 月收盘三次探到 260 附近，这里当作整段上涨的起点。',
+        '<b>1 浪（→2023-07，385.74，+48%）</b>：ChatGPT 行情启动。<b>2 浪</b>回落到 343.66，只回撤了 1 浪的 33.5%，偏浅。',
+        '<b>3 浪（2023-10 → 2025-02，539.52，+57%）</b>：内部 (i) 涨到 502.96（2024-07），(ii) 是 2024-08 日元套利平仓，跌到 434.77；(iii) 涨到 538.17（2024-12），(iv) 回到 505.08（2025-01），(v) 到顶。长度是 1 浪的 1.56 倍，接近常见的 1.618。',
+        '<b>4 浪（→2025-04-08，416.06，−22.9%）</b>：关税冲击。回撤 3 浪 63%，偏深，但没有跌进 1 浪顶 385.74 以下，规则成立。',
+        '<b>5 浪（→2026-10-06，759.66，+83%）</b>：最长的一浪，属于“延长 5 浪”。内部 (i)(iii)(v) 分别涨 +53%、+34%、+15%，一浪比一浪弱，是典型的末端衰竭。',
+        '<b>现在：A 浪（10-06 至今，−19.9%）</b>：先跌到 647（a），反弹到 690（b），再跌到 608（c，进行中；11-20 单日 −5.7%）。A 浪还没结束。五浪走完后，通常会对整段涨幅做一次 A-B-C 调整。',
+      ],
+      levels: [
+        ['558–578', '第一支撑区，A 浪最可能结束的地方。三种量度重合：c 段等于 a 段 577.77、整段涨幅 38.2% 回撤 568.83、5 浪内部 (ii) 浪低点 558.28。'],
+        ['508–510', '第二支撑区。50% 回撤 509.88，与 c 段 = 1.618 倍 a 段 508.18 重合。'],
+        ['416–540', '前一个 4 浪的区间，大级别调整常见的终点。离现在还很远，只作参考。'],
+        ['676 / 690', 'A 浪结束的确认：反弹后收盘站上 676.49（11-19 盘中高点）是第一个信号；站上 690.38（b 段高点）基本可以确认 A 浪结束、B 浪开始。'],
+        ['635.77', '11-20 收盘 608.45 已跌破。“10 月高点只是第 3 浪、后面还有第 5 浪新高”的看涨数法因此作废，这里变成上方阻力。'],
+        ['759.66', '向上的失效线。重新创新高，说明 5 浪还没走完，这套数法就要改。'],
+      ],
+      rules: [
+        ['2 浪不跌破 1 浪起点', '343.66 > 260.10'],
+        ['3 浪不是最短的推动浪', '1 / 3 / 5 浪 = 126 / 196 / 344 点'],
+        ['4 浪不进入 1 浪的价格区', '416.06 > 385.74'],
+      ],
+      guides: '比例上：3 浪 ≈ 1.56 × 1 浪（常见 1.618）；5 浪 ≈ 2.73 × 1 浪，是延长浪；2 浪回撤 33.5% 偏浅、4 浪回撤 63% 偏深，形态不算教科书式，但三条硬规则都满足。',
+      alt: [
+        '<b>看涨数法（已作废）</b>：把 2025-04 以来看成新一轮 1-2-3：635.77 是 1 浪顶、558.28 是 2 浪、759.66 是 3 浪，现在是 4 浪，后面还会有 5 浪新高。按规则 4 浪不能跌进 1 浪顶 635.77 以下，11-20 收盘 608.45 已经跌破，这个数法不再成立。',
+        '<b>更大一级的读法</b>：2022–2026 整段只是 2009 年以来超长牛市里的一浪，这次调整是更大级别的 4 浪。结论和主数法相同：眼下是调整，只是调整结束后仍有机会再创新高。',
+      ],
+    },
+    BTC: {
+      fmt: fmtB, unit: '', yMin: 13000, yMax: 150000, ticks: [15000, 20000, 30000, 50000, 70000, 100000, 150000], tickFmt: v => (v / 1000) + 'K',
+      big: [['2022-11-21', '0', 15787.28, 'lo'], ['2023-07-13', '1', 31476.05, 'hi'], ['2023-09-11', '2', 25162.65, 'lo'], ['2024-03-13', '3', 73083.50, 'hi'], ['2024-09-06', '4', 53948.75, 'lo'], ['2025-10-06', '5', 124752.53, 'hi']],
+      corr: [['2026-06-30', 'A', 58558.86, 'lo'], ['2026-09-21', 'B', 86602.91, 'hi'], ['2026-11-20', 'C?', 58798.98, 'lo']],
+      lines: [[86602.91, '失效线 86.6K'], [70269.91, '50% 70.3K'], [57412.01, '61.8% 57.4K'], [45695, 'C=0.618A 45.7K'], [40651, 'C=A 40.7K']],
+      zone: [53948.75, 73083.50, '前一个 4 浪区间 53.9K–73.1K'], zoneFrom: '2024-09-06', zoneLabelAt: '2025-01-10', zoneShort: '前 4 浪区间',
+      sold: null,
+      status: [
+        ['所处位置', '调整的 C 浪', '五浪在 2025-10-06 见顶，A、B 已走完'],
+        ['距 2025-10 高点', '−52.9%', 'C 段最低收盘 58,799（11-20）；11-21 盘中 55,632'],
+        ['回撤了整段涨幅', '60.5%', '15,787 → 124,753 这一段'],
+        ['关键支撑', '57.4K / 53.9K', '61.8% 回撤 / 前 4 浪低点'],
+        ['C 浪何时结束', '估不准', '比例给出 2027-01 至 06，历史上没有预测力'],
+      ],
+      timing: {
+        from: '2025-09-01', to: '2027-07-31', yMin: 35000, yMax: 132000, ticks: [40000, 60000, 80000, 100000, 120000], tickFmt: v => (v / 1000) + 'K', monthEvery: 3,
+        path: [['2025-10-06', '5', 124752.53, 'hi'], ['2026-02-05', '(a)', 62702.10, 'lo'], ['2026-05-10', '(b)', 82138.93, 'hi'], ['2026-06-30', 'A', 58558.86, 'lo'], ['2026-09-21', 'B', 86602.91, 'hi'], ['2026-11-20', 'C?', 58798.98, 'lo']],
+        lines: [[86602.91, 'B 顶 86.6K'], [57412.01, '61.8% 57.4K'], [45695, 'C=0.618A 45.7K'], [40651, 'C=A 40.7K']],
+        zone: [53948.75, 73083.50, '前 4 浪区间'],
+        bands: [['2026-10-05', '2026-10-19', '前两轮熊市长度', null]],
+        marks: [['2027-01-01', 'C=0.382A', 0], ['2027-03-05', 'C=0.618A', 1], ['2027-06-15', 'C=A', 0]],
+        legend: [['band', '前两轮熊市从顶到底的时长（364、378 天）'], ['mark', '时间位'], ['zone', '前一个 4 浪区间 53.9K–73.1K']],
+      },
+      tLede: '波浪理论用斐波那契比例来估时间，但时间比价格更难估。下面先按比例算出几个日期，再用 2014 年以来的 BTC 数据检验这些比例准不准，最后和前几轮熊市的时长比较。',
+      tProjTitle: 'C 浪的时间位（C 浪从 9-21 开始，A 浪用了 267 天）',
+      tProj: [
+        ['2026-10 已过', '前两轮完整熊市从顶到底分别用了 364 天（2017-12 → 2018-12）和 378 天（2021-11 → 2022-11）。这次到今天已经 411 天，按这个尺子底部应该已经到了。但这次只跌了 53%，那两次是 83% 和 77%。'],
+        ['2027-01-01', 'C 浪 = 0.382 × A 浪的时长。'],
+        ['2027-03-05', 'C 浪 = 0.618 × A 浪。'],
+        ['2027-06-15', 'C 浪 = A 浪。'],
+        ['看不出', '用历史分布代替固定比例，中间一半落在 2027-09 到 2029-03，范围大到没有用：BTC 的 C 段可以是 A 段的 0.27 倍，也可以是 5 倍以上。'],
+      ],
+      tCheck: [
+        '做法：把 2014-09 至 2025-09 BTC 所有“跌-涨-跌”三段（后一段的高点和低点都更低）找出来，看 C 段时长是否落在 A 段的 0.618、1 或 1.618 倍 ±15% 以内，再和随机打乱配对比较。',
+        '<b>15% 摆动</b>（18 次）：33% 落在比例附近，随机配对 21%（p = 0.17）。<br><b>25% 摆动</b>（9 次）：44% 对 38%（p = 0.49）。',
+        '样本少，而且都看不出比随机好。C 段的时长从 A 段的 0.27 倍到 5.4 倍都有（10%–90% 分位）。对 BTC，时间比例基本给不出有用的日期，价格位（57.4K、53.9K）比日期更值得看。',
+      ],
+      tEpsTitle: '过去 BTC 从两年高点跌 50% 以上的几次',
+      tEpsNote: '数据从 2014-09 开始，2013–2015 那一轮的顶点不在数据里，没有放进表。完整的熊市（2017、2021 年 11 月开始的两次）都走了一年左右、跌了 77%–83%；2021 年 4 月那次只用了 98 天。这次时间已经比前两轮熊市都长，跌幅却浅得多，这本身就说明它不完全照着以往的周期走。',
+      story: [
+        '<b>起点 0（2022-11-21，15,787）</b>：FTX 倒闭后的熊市最低收盘。',
+        '<b>1 浪（→2023-07，31,476，+99%）</b>；<b>2 浪</b>回落到 25,163，回撤 1 浪 40%。',
+        '<b>3 浪（→2024-03-13，73,084，+190%）</b>：现货 ETF 获批，涨幅最猛的一浪，长度是 1 浪的 3.05 倍。',
+        '<b>4 浪（→2024-09-06，53,949，−26%）</b>：横盘半年，回撤 3 浪 39.9%，几乎正好是教科书的 38.2%。',
+        '<b>5 浪（→2025-10-06，124,753，+131%）</b>：内部 (i) 到 106K，(ii) 回到 76K（关税冲击），之后走完到顶。',
+        '<b>调整 A 浪（→2026-06-30，58,559，−53%）</b>：内部是 (a) 62.7K、(b) 82.1K、(c) 58.6K 三段。<b>B 浪</b>反弹到 86,603，回撤 A 浪 42%。',
+        '<b>现在：C 浪（9-21 至今，最低收盘 −32.1%）</b>：已经回到前一个 4 浪区间（53,949–73,084）里面。11-21 盘中一度跌到 55,632，跌破了 A 浪低点 58,559 和 61.8% 回撤 57,412，但收盘价还没有跌破。',
+      ],
+      levels: [
+        ['57,412', '整段涨幅的 61.8% 回撤。11-21 盘中已经跌破，收盘价还在上方。'],
+        ['53,949', '前一个 4 浪的低点（2024-09）。五浪结束后的调整，常常止于前一个 4 浪区间；跌破说明调整比“标准”更深。'],
+        ['45,695', 'C 浪 = 0.618 倍 A 浪的位置。'],
+        ['40,651', 'C 浪与 A 浪等幅（同样 −53%）的位置，常见的 C 浪终点之一。'],
+        ['86,603', '向上的失效线（B 浪顶）。收盘站上去，“C 浪进行中”的说法就不成立。'],
+      ],
+      rules: [
+        ['2 浪不跌破 1 浪起点', '25,163 > 15,787'],
+        ['3 浪不是最短的推动浪', '1 / 3 / 5 浪 = 15.7K / 47.9K / 70.8K'],
+        ['4 浪不进入 1 浪的价格区', '53,949 > 31,476'],
+      ],
+      guides: '比例上：3 浪 ≈ 3.05 × 1 浪；4 浪回撤 3 浪 39.9%（接近 38.2%）；B 浪回撤 A 浪 42.4%。这一套比 QQQ 的更接近教科书形态。',
+      alt: [
+        '<b>2025-01 就已见顶</b>：把 106K（2025-01）当作 5 浪顶，之后 76K → 124.7K 是创新高的 B 浪（扩张平台），124.7K 以后才是 C 浪。数法不同，但结论一样：2025-10 以后是大级别调整。',
+        '<b>C 浪已经接近完成</b>：如果 C 浪只走到前 4 浪区间（53.9K–57.4K）就结束，之后会有新一轮上涨。判断依据是能否收复 86,603 的 B 浪顶。',
+      ],
+    },
+  };
+
+  const t = s => Date.parse(s + 'T00:00:00Z');
+  // Live progress from code/wave_tracker.py replaces the hand-written correction points.
+  Object.keys(ASSETS).forEach(name => {
+    const st = RAW[name].status, a = ASSETS[name], px = new Map(RAW[name].series);
+    a.corr = st.pivots.slice(1).map(p => [p.date, p.label, p.price, p.label === 'B' ? 'hi' : 'lo']);
+    if (st.leg && st.ext.date !== st.start.date) a.corr.push([st.ext.date, st.leg + '?', st.ext.price, st.down ? 'lo' : 'hi']);
+    a.corrSub = [];
+    a.tree = st.tree || [];
+  });
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const box = document.getElementById('chart-box');
+  const svg = document.getElementById('chart');
+  const tip = document.getElementById('tip');
+  let current = 'QQQ';
+  try { const s = localStorage.getItem('wave-asset'); if (s === 'BTC' || s === 'QQQ') current = s; } catch (e) {}
+
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+
+  // Sub-wave tree from code/wave_tracker.py: level 0 = big waves, 1 = (i)-(v) / (a)-(c), 2 = i-v / a-c.
+  function levelPivots(tree, level) {
+    const out = [];
+    const walk = (nodes, lv) => nodes.forEach((n, i) => {
+      if (lv === level && i < nodes.length - 1) out.push([n.end[0], n.label, n.end[1], n.end[1] >= n.start[1] ? 'hi' : 'lo']);
+      if (lv < level) walk(n.children || [], lv + 1);
+    });
+    walk(tree, 0);
+    return out;
+  }
+  function levelPath(tree, level) {
+    const pts = [];
+    const walk = (n, lv) => {
+      if (lv < level && n.children && n.children.length) n.children.forEach(c => walk(c, lv + 1));
+      else { if (!pts.length) pts.push([n.start[0], n.start[1]]); pts.push([n.end[0], n.end[1]]); }
+    };
+    tree.forEach(n => walk(n, 0));
+    return pts;
+  }
+  function waveName(n) {
+    const l = n.label.replace('?', '');
+    const base = n.level === 0 ? (/^\d$/.test(l) ? '第 ' + l + ' 浪' : l + ' 浪') : l + ' 浪';
+    return base + (n.label.endsWith('?') ? '（进行中）' : '');
+  }
+
+  function segmentName(a, d) {
+    const T = t(d), tree = a.tree;
+    if (!tree.length || T <= t(tree[0].start[0])) return '2022 熊市尾段';
+    const parts = [];
+    let nodes = tree;
+    while (nodes && nodes.length) {
+      const n = nodes.find(x => T > t(x.start[0]) && T <= t(x.end[0]));
+      if (!n) break;
+      parts.push(waveName(n));
+      nodes = n.children;
+    }
+    if (!parts.length) {
+      const last = tree[tree.length - 1];
+      return waveName(last).replace('（进行中）', '') + '（进行中）';
+    }
+    return parts.join(' › ');
+  }
+
+  let degree = 1, range = 'all';
+  try {
+    const g = Number(localStorage.getItem('wave-degree')); if ([0, 1, 2].includes(g) && localStorage.getItem('wave-degree') !== null) degree = g;
+    const r = localStorage.getItem('wave-range'); if (['all', '1y', '6m', '3m'].includes(r)) range = r;
+  } catch (e) {}
+
+  function logTicks(lo, hi) {
+    if (hi / lo < 2.2) return niceTicks(lo, hi, 5);
+    for (const ms of [[1, 2, 5], [1, 1.5, 2, 3, 5, 7], [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 7, 8]]) {
+      const out = [];
+      for (let k = Math.floor(Math.log10(lo)) - 1; k <= Math.ceil(Math.log10(hi)); k++) ms.forEach(m => { const v = m * Math.pow(10, k); if (v >= lo && v <= hi) out.push(v); });
+      if (out.length >= 4) return out.length > 8 ? out.filter((_, i) => i % 2 === 0) : out;
+    }
+    return niceTicks(lo, hi, 5);
+  }
+
+  function draw() {
+    const a = ASSETS[current], all = RAW[current].series;
+    const endT = t(all[all.length - 1][0]);
+    const months = { all: 0, '1y': 12, '6m': 6, '3m': 3 }[range];
+    const t0 = months ? endT - months * 30.44 * 864e5 : t(all[0][0]);
+    const series = all.filter(p => t(p[0]) >= t0);
+    const t1 = endT + (endT - t0) * 0.02 + 2 * 864e5;
+    let vmin = Math.min(...series.map(p => p[1])), vmax = Math.max(...series.map(p => p[1]));
+    if (range === 'all') { vmin = Math.min(vmin, a.yMin); vmax = Math.max(vmax, a.yMax); }
+    else { const pad = Math.log(vmax / vmin) * 0.14; vmin /= Math.exp(pad); vmax *= Math.exp(pad); }
+    const ticks = range === 'all' ? a.ticks : logTicks(vmin, vmax);
+    const W = Math.max(box.clientWidth, 680), H = Math.round(Math.min(560, Math.max(380, W * 0.52)));
+    const ml = 52, mr = 112, mt = 30, mb = 30, xr = W - mr;
+    const lmin = Math.log(vmin), lmax = Math.log(vmax);
+    const X = d => ml + (t(d) - t0) / (t1 - t0) * (W - ml - mr);
+    const Y = v => mt + (lmax - Math.log(v)) / (lmax - lmin) * (H - mt - mb);
+    const inX = d => t(d) >= t0 && t(d) <= t1, inY = v => v >= vmin && v <= vmax;
+    const showFib = document.getElementById('show-fib').checked;
+    const halo = 'paint-order="stroke" stroke="var(--surface)" stroke-width="3.5" stroke-linejoin="round"';
+    let s = `<defs><clipPath id="plotclip"><rect x="${ml}" y="${mt - 2}" width="${xr - ml}" height="${H - mt - mb + 4}"></rect></clipPath></defs>`;
+    if (range === 'all') {
+      const x3 = X('2023-11-20');
+      s += `<rect x="${ml}" y="${mt}" width="${x3 - ml}" height="${H - mt - mb}" fill="var(--pre-wash)"></rect><line x1="${x3}" x2="${x3}" y1="${mt}" y2="${H - mb}" stroke="var(--axis)" stroke-width="1"></line><text x="${x3 + 6}" y="${mt + 12}" font-size="12" fill="var(--muted)">近三年 →</text>`;
+    }
+    ticks.forEach(v => { const y = Y(v); s += `<line x1="${ml}" x2="${xr}" y1="${y}" y2="${y}" stroke="var(--grid)" stroke-width="1"></line><text x="${ml - 8}" y="${y + 4}" font-size="11" text-anchor="end" fill="var(--muted)" style="font-variant-numeric:tabular-nums">${a.tickFmt(Math.round(v * 100) / 100)}</text>`; });
+    const spanDays = (t1 - t0) / 864e5;
+    if (spanDays > 540) {
+      for (let yr = new Date(t0).getUTCFullYear() + 1; Date.UTC(yr, 0, 1) <= t1; yr++) { const x = X(yr + '-01-01'); s += `<line x1="${x}" x2="${x}" y1="${H - mb}" y2="${H - mb + 4}" stroke="var(--axis)"></line><text x="${x}" y="${H - mb + 18}" font-size="11" text-anchor="middle" fill="var(--muted)">${yr}</text>`; }
+    } else {
+      const step = spanDays > 240 ? 2 : 1, f = new Date(t0);
+      for (let y = f.getUTCFullYear(), m = f.getUTCMonth() + 1; Date.UTC(y, m, 1) <= t1; m++) {
+        if (m > 11) { m = 0; y++; }
+        if (m % step) continue;
+        const x = ml + (Date.UTC(y, m, 1) - t0) / (t1 - t0) * (W - ml - mr);
+        s += `<line x1="${x}" x2="${x}" y1="${H - mb}" y2="${H - mb + 4}" stroke="var(--axis)"></line><text x="${x}" y="${H - mb + 18}" font-size="11" text-anchor="middle" fill="var(--muted)">${m === 0 ? y + ' 年 1 月' : (m + 1) + ' 月'}</text>`;
+      }
+    }
+    s += `<line x1="${ml}" x2="${xr}" y1="${H - mb}" y2="${H - mb}" stroke="var(--axis)" stroke-width="1"></line>`;
+    s += '<g clip-path="url(#plotclip)">';
+    let margin = [];
+    if (showFib) {
+      const xz = Math.max(ml, X(a.zoneFrom));
+      const zy1 = Y(a.zone[1]), zy0 = Y(a.zone[0]);
+      s += `<rect x="${xz}" y="${zy1}" width="${xr - xz}" height="${zy0 - zy1}" fill="var(--corr-wash)"></rect>`;
+      if (inY(a.zone[0]) || inY(a.zone[1])) margin.push([(Math.max(zy1, mt) + Math.min(zy0, H - mb)) / 2, a.zoneShort || a.zone[2]]);
+      a.lines.forEach(([v, lab]) => { if (!inY(v)) return; const y = Y(v); s += `<line x1="${xz}" x2="${xr}" y1="${y}" y2="${y}" stroke="var(--muted)" stroke-width="1" stroke-opacity="0.7"></line>`; if (lab) margin.push([y, lab]); });
+    }
+    let dpath = '';
+    series.forEach(([d, v], i) => { dpath += (i ? 'L' : 'M') + X(d).toFixed(1) + ' ' + Y(v).toFixed(1); });
+    s += `<path d="${dpath}" fill="none" stroke="var(--price)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>`;
+    const poly = pts => 'M' + pts.map(p => X(p[0]).toFixed(1) + ' ' + Y(p[p.length - 1]).toFixed(1)).join(' L');
+    s += `<path d="${poly(a.big.map(p => [p[0], p[2]]))}" fill="none" stroke="var(--ink-2)" stroke-width="1.5" stroke-opacity="${degree ? 0.45 : 0.85}"></path>`;
+    const top = a.big[a.big.length - 1];
+    s += `<path d="${poly([[top[0], top[2]]].concat(a.corr.map(p => [p[0], p[2]])))}" fill="none" stroke="var(--corr)" stroke-width="2" stroke-linejoin="round" stroke-opacity="${degree ? 0.6 : 1}"></path>`;
+    if (degree) s += `<path d="${poly(levelPath(a.tree, degree))}" fill="none" stroke="var(--ink)" stroke-width="1.1" stroke-opacity="0.7" stroke-linejoin="round"></path>`;
+    s += '</g>';
+    margin.sort((p, q) => p[0] - q[0]);
+    for (let i = 1; i < margin.length; i++) if (margin[i][0] - margin[i - 1][0] < 13) margin[i][0] = margin[i - 1][0] + 13;
+    margin.forEach(([y, lab]) => { s += `<text x="${xr + 6}" y="${y + 4}" font-size="11" fill="var(--ink-2)" style="font-variant-numeric:tabular-nums">${esc(lab)}</text>`; });
+    if (!window.WAVES_PUBLIC && a.sold && inX(a.sold[0])) { const [d, v, lab] = a.sold, x = X(d), y = Y(v); s += `<path d="M${x} ${y - 6} L${x + 6} ${y} L${x} ${y + 6} L${x - 6} ${y} Z" fill="var(--ink)" stroke="var(--surface)" stroke-width="2"></path><text x="${x - 10}" y="${y + 20}" font-size="11.5" text-anchor="end" fill="var(--ink)" ${halo}>${esc(lab)}</text>`; }
+    // sub-wave labels, finest first so the bigger ones draw on top; crowded labels are skipped (zoom in to see them)
+    let skipped = 0;
+    for (let lv = degree; lv >= 1; lv--) {
+      const gap = lv === 2 ? 13 : 18, fs = lv === 2 ? 10.5 : 12, last = { hi: -1e9, lo: -1e9 };
+      levelPivots(a.tree, lv).forEach(([d, lab, v, k]) => {
+        if (!inX(d) || !inY(v)) return;
+        const x = X(d);
+        if (x - last[k] < gap) { skipped++; return; }
+        last[k] = x;
+        const y = Y(v) + (k === 'hi' ? (lv === 2 ? -7 : -9) : (lv === 2 ? 15 : 18));
+        s += `<circle cx="${x}" cy="${Y(v)}" r="${lv === 2 ? 2 : 2.6}" fill="var(--ink-2)"></circle><text x="${x}" y="${y}" font-size="${fs}" font-weight="${lv === 1 ? 650 : 500}" text-anchor="middle" fill="${lv === 1 ? 'var(--ink)' : 'var(--ink-2)'}" ${halo}>${esc(lab)}</text>`;
+      });
+    }
+    const badge = (d, lab, v, k, ring) => {
+      if (!inX(d) || !inY(v)) return '';
+      const x = X(d), y = Y(v) + (k === 'hi' ? -22 : 22), r = lab.length > 1 ? 12 : 10;
+      return `<circle cx="${x}" cy="${Y(v)}" r="4" fill="${ring}" stroke="var(--surface)" stroke-width="2"></circle><circle cx="${x}" cy="${y}" r="${r}" fill="var(--surface)" stroke="${ring}" stroke-width="1.6"></circle><text x="${x}" y="${y + 4}" font-size="12" font-weight="700" text-anchor="middle" fill="var(--ink)">${lab}</text>`;
+    };
+    a.big.forEach(([d, lab, v, k]) => { s += badge(d, lab, v, k, 'var(--ink-2)'); });
+    a.corr.forEach(([d, lab, v, k]) => { s += badge(d, lab, v, k, 'var(--corr)'); });
+    document.getElementById('sub-hint').textContent = skipped ? `这个范围里还有 ${skipped} 个${degree === 2 ? '小浪' : '中浪'}标注挤在一起没画出来，选“近半年”或“近三月”可以看清。` : '';
+    s += `<line id="cross" x1="0" x2="0" y1="${mt}" y2="${H - mb}" stroke="var(--ink-2)" stroke-width="1" visibility="hidden"></line><circle id="hdot" r="4.5" fill="var(--price)" stroke="var(--surface)" stroke-width="2" visibility="hidden"></circle>`;
+    s += `<rect id="hit" x="${ml}" y="${mt}" width="${xr - ml}" height="${H - mt - mb}" fill="transparent"></rect>`;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.setAttribute('aria-label', current + ' 波浪结构图，日收盘价，对数坐标');
+    svg.innerHTML = s;
+    const xs = series.map(p => X(p[0]));
+    const hit = svg.querySelector('#hit'), cross = svg.querySelector('#cross'), hdot = svg.querySelector('#hdot');
+    function move(clientX) {
+      const r = svg.getBoundingClientRect(), sx = (clientX - r.left) * (W / r.width);
+      let lo = 0, hi = xs.length - 1;
+      while (hi - lo > 1) { const m = (lo + hi) >> 1; if (xs[m] < sx) lo = m; else hi = m; }
+      const i = Math.abs(xs[lo] - sx) < Math.abs(xs[hi] - sx) ? lo : hi;
+      const [d, v] = series[i], x = xs[i], y = Y(v);
+      cross.setAttribute('x1', x); cross.setAttribute('x2', x); cross.setAttribute('visibility', 'visible');
+      hdot.setAttribute('cx', x); hdot.setAttribute('cy', y); hdot.setAttribute('visibility', 'visible');
+      tip.innerHTML = `<div class="d">${d}</div><div class="p">${a.fmt(v)}</div><div>${esc(segmentName(a, d))}</div>`;
+      tip.hidden = false;
+      const scale = r.width / W, px = x * scale, py = y * scale;
+      const tw = tip.offsetWidth, bw = box.clientWidth;
+      tip.style.left = (px + 14 + tw > bw ? Math.max(4, px - tw - 14) : px + 14) + 'px';
+      tip.style.top = Math.max(4, py - tip.offsetHeight - 12) + 'px';
+    }
+    function leave() { cross.setAttribute('visibility', 'hidden'); hdot.setAttribute('visibility', 'hidden'); tip.hidden = true; }
+    hit.addEventListener('mousemove', e => move(e.clientX));
+    hit.addEventListener('mouseleave', leave);
+    hit.addEventListener('touchstart', e => move(e.touches[0].clientX), { passive: true });
+    hit.addEventListener('touchmove', e => move(e.touches[0].clientX), { passive: true });
+  }
+
+  function renderWaveTable() {
+    const a = ASSETS[current];
+    const pctTxt = v => (v >= 0 ? '+' : '−') + Math.abs(v * 100).toFixed(1) + '%';
+    const dur = (p, q) => { const d = Math.round((t(q) - t(p)) / 864e5); return d >= 60 ? (d / 30.44).toFixed(1) + ' 个月' : d + ' 天'; };
+    let rows = '<tr><th>浪</th><th>开始</th><th>结束</th><th>起点价</th><th>终点价</th><th>涨跌</th><th>历时</th></tr>';
+    const walk = nodes => nodes.forEach(n => {
+      rows += `<tr class="lv${n.level}"><td style="padding-left:${10 + n.level * 20}px">${esc(waveName(n))}</td><td>${n.start[0]}</td><td>${n.end[0]}</td><td class="n">${a.fmt(n.start[1])}</td><td class="n">${a.fmt(n.end[1])}</td><td class="n">${pctTxt(n.end[1] / n.start[1] - 1)}</td><td class="n">${dur(n.start[0], n.end[0])}</td></tr>`;
+      if (n.level < degree) walk(n.children || []);
+    });
+    walk(a.tree);
+    document.getElementById('wave-table').innerHTML = rows;
+    document.getElementById('wave-table-note').textContent = degree ? `按上面选的级别展开到${degree === 2 ? '小浪' : '中浪'}。没有展开的浪是因为时间太短，日线上分不出更小的浪。` : '只显示大浪；选“中浪”或“小浪”可以展开。';
+  }
+
+  function renderText() {
+    const a = ASSETS[current];
+    document.getElementById('status').innerHTML = RAW[current].tiles.map(([k, v, sub]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`).join('');
+    document.getElementById('story').innerHTML = a.story.map(x => `<li>${x}</li>`).join('');
+    document.getElementById('levels').innerHTML = a.levels.map(([v, txt]) => `<div class="lv"><b>${v}</b><span class="note">${txt}</span></div>`).join('');
+    document.getElementById('rules').innerHTML = '<tr><th>规则</th><th>数据</th><th>结果</th></tr>' + a.rules.map(([r, d]) => `<tr><td>${r}</td><td class="n">${d}</td><td class="pass">成立</td></tr>`).join('');
+    document.getElementById('guides').textContent = a.guides;
+    document.getElementById('alt').innerHTML = a.alt.map(x => `<p>${x}</p>`).join('');
+    renderWaveTable();
+    const last = RAW[current].last;
+    const info = RAW[current].info;
+    document.getElementById('foot').textContent = `数据：Yahoo Finance 日收盘价（QQQ 未按分红调整），截至 ${last[0]}${info.provisional ? '，最后一天是未收盘的实时价' : ''}。浪的转折点取收盘价，与按盘中高低点数出来的会略有出入。历史检验：纳斯达克 100 指数（1985 年起）、BTC-USD（2014-09 起）。页面由 code/wave_tracker.py 生成，更新于 ${RAW[current].updated}。`;
+    renderProgress();
+    renderTiming();
+  }
+
+  function renderTiming() {
+    const a = ASSETS[current], tm = RAW[current].timing;
+    document.getElementById('t-lede').textContent = a.tLede;
+    document.getElementById('t-h-proj').textContent = a.tProjTitle;
+    document.getElementById('t-proj').innerHTML = a.tProj.map(([v, txt]) => `<div class="lv wide"><b>${v}</b><span class="note">${txt}</span></div>`).join('');
+    document.getElementById('t-check').innerHTML = a.tCheck.map(x => `<p>${x}</p>`).join('');
+    document.getElementById('t-h-eps').textContent = a.tEpsTitle;
+    document.getElementById('t-eps-note').textContent = a.tEpsNote;
+    const isQ = current === 'QQQ', unit = isQ ? '个交易日' : '天';
+    const pct = v => (v >= 0 ? '+' : '−') + Math.abs(v * 100).toFixed(1) + '%';
+    const eps = tm.eps.filter(e => !e.ongoing && e.peak > RAW[current].histStart);
+    let rows = `<tr><th>顶点</th><th>低点</th><th>跌幅</th><th>顶到底</th><th>跌到 ${isQ ? '−19.9%' : '−50%'} 用了</th><th>之后到见底</th><th>之后又跌</th></tr>`;
+    eps.forEach(e => { rows += `<tr><td>${e.peak}</td><td>${e.trough}</td><td class="n">${pct(e.depth)}</td><td class="n">${e.days_to_trough} 天</td><td class="n">${e.days_to_hit} 天</td><td class="n">${e.rows_hit_to_trough} ${unit}</td><td class="n">${pct(e.more_after_hit)}</td></tr>`; });
+    // the decline in progress, measured from the 5-wave top on the closes the tracker supplied
+    const topD = RAW[current].status.top[0], topP = RAW[current].status.top[1];
+    const since = RAW[current].series.filter(p => p[0] >= topD);
+    const hitRow = since.find(p => p[1] <= topP * (1 - tm.thr));
+    const nw = { peak: topD, depth: Math.min(...since.map(p => p[1])) / topP - 1, days: Math.round((t(RAW[current].last[0]) - t(topD)) / 864e5),
+                 hit: hitRow ? Math.round((t(hitRow[0]) - t(topD)) / 864e5) + ' 天' : '还没到' };
+    rows += `<tr class="now"><td>${nw.peak}</td><td class="ongoing">进行中</td><td class="n">${pct(nw.depth)}</td><td class="n">${nw.days} 天+</td><td class="n">${nw.hit}</td><td class="n">?</td><td class="n">?</td></tr>`;
+    document.getElementById('t-eps').innerHTML = rows;
+    const lg = { band: '<i style="display:inline-block;width:18px;height:10px;background:var(--time-wash);border-radius:2px"></i>', mark: '<i style="display:inline-block;width:0;height:12px;border-left:1px solid var(--ink-2)"></i>', zone: '<i style="display:inline-block;width:18px;height:10px;background:var(--corr-wash);border-radius:2px"></i>' };
+    const hasBand = visibleBands().length > 0;
+    document.getElementById('tlegend').innerHTML = '<span><i class="sw" style="border-color:var(--price)"></i>日收盘价</span><span><i class="sw" style="border-color:var(--corr)"></i>调整浪</span><span><i class="sw" style="border-color:var(--muted);border-top-width:1px"></i>确认线 / 初步信号 / 目标位</span>' + a.timing.legend.filter(([k]) => k !== 'band' || hasBand).map(([k, txt]) => `<span>${lg[k]}${txt}</span>`).join('');
+  }
+
+  function visibleBands() {
+    const st = RAW[current].status;
+    return ASSETS[current].timing.bands.filter(b => !b[3] || b[3] === st.leg);
+  }
+
+  function niceTicks(lo, hi, n) {
+    const raw = (hi - lo) / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / mag;
+    const step = (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * mag, out = [];
+    for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) out.push(Math.round(v * 1e6) / 1e6);
+    return out;
+  }
+
+  function shortTarget(lab) {
+    let s = lab.replace(/（.*?）/g, '').replace(/\s/g, '').replace(/段/g, '').replace(/×/g, '');
+    s = s.replace(/^B反弹A浪的/, 'B ');
+    return s;
+  }
+
+  function drawTiming() {
+    const a = ASSETS[current], T = a.timing, st = RAW[current].status;
+    const tb = document.getElementById('tchart-box'), tsvg = document.getElementById('tchart'), ttip = document.getElementById('ttip');
+    const marks = (st.marks || []).filter(m => m[2]).map((m, i) => [m[0], m[2], i % 2]);
+    const bands = visibleBands();
+    let toD = T.to;
+    marks.concat(bands.map(b => [b[1]])).forEach(m => { const d = new Date(t(m[0]) + 25 * 864e5).toISOString().slice(0, 10); if (d > toD) toD = d; });
+    const series = RAW[current].series.filter(p => p[0] >= T.from);
+    const lastP = series[series.length - 1][1];
+    const lines = [];
+    if (st.confirm_level) lines.push([st.confirm_level, '确认 ' + a.fmt(st.confirm_level)]);
+    if (st.leg && !st.turned) lines.push([st.turn_level, '初步 ' + a.fmt(st.turn_level)]);
+    (st.targets || []).forEach(([v, lab]) => lines.push([v, shortTarget(lab) + ' ' + a.fmt(v)]));
+    const shown = lines.filter(([v]) => v > lastP * 0.6 && v < lastP * 1.6);
+    let lo = Math.min(...series.map(p => p[1]), ...shown.map(l => l[0]), T.zone[0]), hi = Math.max(...series.map(p => p[1]), ...shown.map(l => l[0]));
+    const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
+    const ticks = niceTicks(lo, hi, 5);
+    const W = Math.max(tb.clientWidth, 640), H = Math.round(Math.min(430, Math.max(330, W * 0.42)));
+    const ml = 52, mr = 112, mt = 44, mb = 30;
+    const t0 = t(T.from), t1 = t(toD);
+    const X = d => ml + (t(d) - t0) / (t1 - t0) * (W - ml - mr);
+    const Y = v => mt + (hi - v) / (hi - lo) * (H - mt - mb);
+    const halo = 'paint-order="stroke" stroke="var(--surface)" stroke-width="3.5" stroke-linejoin="round"';
+    const xr = W - mr;
+    let s = '', bandLabels = '';
+    bands.forEach(([d0, d1, lab]) => {
+      const x0 = X(d0), x1 = Math.max(X(d1), x0 + 3), lw = lab.length * 11.5 + 10;
+      s += `<rect x="${x0}" y="${mt}" width="${x1 - x0}" height="${H - mt - mb}" fill="var(--time-wash)"></rect>`;
+      bandLabels += `<rect x="${(x0 + x1) / 2 - lw / 2}" y="${mt + 3}" width="${lw}" height="18" rx="4" fill="var(--surface)" stroke="var(--hair)"></rect><text x="${(x0 + x1) / 2}" y="${mt + 16}" font-size="11.5" text-anchor="middle" fill="var(--ink-2)">${esc(lab)}</text>`;
+    });
+    ticks.forEach(v => { const y = Y(v); s += `<line x1="${ml}" x2="${xr}" y1="${y}" y2="${y}" stroke="var(--grid)" stroke-width="1"></line><text x="${ml - 8}" y="${y + 4}" font-size="11" text-anchor="end" fill="var(--muted)" style="font-variant-numeric:tabular-nums">${T.tickFmt(v)}</text>`; });
+    const f = new Date(t0);
+    for (let y = f.getUTCFullYear(), m = f.getUTCMonth(); Date.UTC(y, m, 1) <= t1; m++) {
+      if (m > 11) { m = 0; y++; }
+      if (m % T.monthEvery) continue;
+      const ts = Date.UTC(y, m, 1); if (ts < t0) continue;
+      const x = ml + (ts - t0) / (t1 - t0) * (W - ml - mr);
+      const lab = m === 0 ? y + ' 年 1 月' : (m + 1) + ' 月';
+      s += `<line x1="${x}" x2="${x}" y1="${H - mb}" y2="${H - mb + 4}" stroke="var(--axis)"></line><text x="${x}" y="${H - mb + 18}" font-size="11" text-anchor="middle" fill="var(--muted)">${lab}</text>`;
+    }
+    s += `<line x1="${ml}" x2="${xr}" y1="${H - mb}" y2="${H - mb}" stroke="var(--axis)" stroke-width="1"></line>`;
+    { const y1 = Y(T.zone[1]), y0 = Y(T.zone[0]); s += `<rect x="${ml}" y="${y1}" width="${xr - ml}" height="${y0 - y1}" fill="var(--corr-wash)"></rect>`; }
+    // price lines; right-margin labels pushed apart so they never overlap
+    const zy = (Y(T.zone[0]) + Y(T.zone[1])) / 2;
+    const lab = shown.map(([v, l]) => ({ y: Y(v), ly: Y(v), l })).concat([{ y: zy, ly: zy, l: T.zone[2], zone: true }]).sort((p, q) => p.y - q.y);
+    for (let i = 1; i < lab.length; i++) if (lab[i].ly - lab[i - 1].ly < 13) lab[i].ly = lab[i - 1].ly + 13;
+    lab.forEach(o => { if (!o.zone) s += `<line x1="${ml}" x2="${xr}" y1="${o.y}" y2="${o.y}" stroke="var(--muted)" stroke-width="1" stroke-opacity="0.7"></line>`; s += `<text x="${xr + 6}" y="${o.ly + 4}" font-size="11" fill="var(--ink-2)" style="font-variant-numeric:tabular-nums">${esc(o.l)}</text>`; });
+    marks.forEach(([d, l, row]) => { const x = X(d); s += `<line x1="${x}" x2="${x}" y1="${mt - 4}" y2="${H - mb}" stroke="var(--ink-2)" stroke-width="1" stroke-opacity="0.75"></line><text x="${x}" y="${row ? mt - 8 : mt - 23}" font-size="11" text-anchor="middle" fill="var(--ink)">${esc(l)}</text>`; });
+    s += bandLabels;
+    let dpath = '';
+    series.forEach(([d, v], i) => { dpath += (i ? 'L' : 'M') + X(d).toFixed(1) + ' ' + Y(v).toFixed(1); });
+    s += `<path d="${dpath}" fill="none" stroke="var(--price)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>`;
+    const kindOf = n => (n.end[1] >= n.start[1] ? 'hi' : 'lo');
+    const corrNodes = a.tree.filter(n => /^[ABC]/.test(n.label));
+    const path = [a.big[a.big.length - 1]].concat(...corrNodes.map(n => (n.children || []).slice(0, -1).map(c => [c.end[0], c.label, c.end[1], kindOf(c)]).concat([[n.end[0], n.label, n.end[1], kindOf(n)]]))).filter(p => p[0] >= T.from);
+    s += `<path d="M${path.map(p => X(p[0]).toFixed(1) + ' ' + Y(p[2]).toFixed(1)).join(' L')}" fill="none" stroke="var(--corr)" stroke-width="2" stroke-linejoin="round"></path>`;
+    path.forEach(([d, l, v, k]) => {
+      const x = X(d), y = Y(v), big = /^[0-9A-Z]/.test(l);
+      s += `<circle cx="${x}" cy="${y}" r="4" fill="${big ? 'var(--corr)' : 'var(--ink-2)'}" stroke="var(--surface)" stroke-width="2"></circle>`;
+      s += `<text x="${x}" y="${y + (k === 'hi' ? -11 : 19)}" font-size="${big ? 12.5 : 11.5}" font-weight="${big ? 700 : 500}" text-anchor="middle" fill="var(--ink)" ${halo}>${esc(l)}</text>`;
+    });
+    s += `<line id="tcross" x1="0" x2="0" y1="${mt}" y2="${H - mb}" stroke="var(--ink-2)" stroke-width="1" visibility="hidden"></line><circle id="tdot" r="4.5" fill="var(--price)" stroke="var(--surface)" stroke-width="2" visibility="hidden"></circle>`;
+    s += `<rect id="thit" x="${ml}" y="${mt}" width="${xr - ml}" height="${H - mt - mb}" fill="transparent"></rect>`;
+    tsvg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    tsvg.setAttribute('aria-label', current + ' 当前这一浪的价格与时间位');
+    tsvg.innerHTML = s;
+    const xs = series.map(p => X(p[0]));
+    const hit = tsvg.querySelector('#thit'), cross = tsvg.querySelector('#tcross'), dot = tsvg.querySelector('#tdot');
+    const named = (st.marks || []).map(m => [m[0], m[1]]).concat(bands.map(b => [b[0], b[2] + '：开始']), bands.map(b => [b[1], b[2] + '：结束']));
+    function move(clientX) {
+      const r = tsvg.getBoundingClientRect(), sx = (clientX - r.left) * (W / r.width), scale = r.width / W;
+      let x, y, html;
+      if (sx > xs[xs.length - 1] + 6) {
+        const T0 = t0 + (sx - ml) / (W - ml - mr) * (t1 - t0), ds = new Date(T0).toISOString().slice(0, 10);
+        const near = named.map(m => [Math.abs(t(m[0]) - T0), m]).filter(m => m[0] < 4 * 864e5).sort((p, q) => p[0] - q[0])[0];
+        x = sx; dot.setAttribute('visibility', 'hidden');
+        html = near ? `<div class="d">${near[1][0]}</div><div>${esc(near[1][1])}</div>` : `<div class="d">${ds}</div><div>还没到</div>`;
+      } else {
+        let lo2 = 0, hi2 = xs.length - 1;
+        while (hi2 - lo2 > 1) { const m = (lo2 + hi2) >> 1; if (xs[m] < sx) lo2 = m; else hi2 = m; }
+        const i = Math.abs(xs[lo2] - sx) < Math.abs(xs[hi2] - sx) ? lo2 : hi2;
+        const [d, v] = series[i]; x = xs[i]; y = Y(v);
+        dot.setAttribute('cx', x); dot.setAttribute('cy', y); dot.setAttribute('visibility', 'visible');
+        html = `<div class="d">${d}</div><div class="p">${a.fmt(v)}</div><div>${segmentName(a, d)}</div>`;
+      }
+      cross.setAttribute('x1', x); cross.setAttribute('x2', x); cross.setAttribute('visibility', 'visible');
+      ttip.innerHTML = html; ttip.hidden = false;
+      const px = x * scale, py = (y === undefined ? mt + 40 : y) * scale, tw = ttip.offsetWidth, bw = tb.clientWidth;
+      ttip.style.left = (px + 14 + tw > bw ? Math.max(4, px - tw - 14) : px + 14) + 'px';
+      ttip.style.top = Math.max(4, py - ttip.offsetHeight - 12) + 'px';
+    }
+    function leave() { cross.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); ttip.hidden = true; }
+    hit.addEventListener('mousemove', ev => move(ev.clientX));
+    hit.addEventListener('mouseleave', leave);
+    hit.addEventListener('touchstart', ev => move(ev.touches[0].clientX), { passive: true });
+    hit.addEventListener('touchmove', ev => move(ev.touches[0].clientX), { passive: true });
+    // On narrow screens, scroll so the latest price sits at about 40% of the view and the time marks to its right stay visible.
+    const sc = tb.parentElement, xLast = xs[xs.length - 1] * (tsvg.getBoundingClientRect().width / W);
+    sc.scrollLeft = Math.max(0, xLast - sc.clientWidth * 0.4);
+  }
+
+  function renderProgress() {
+    const R = RAW[current], st = R.status, a = ASSETS[current], info = R.info;
+    document.getElementById('p-updated').textContent = `自动更新于 ${R.updated}；价格时间 ${info.price_time}（${info.tz === 'UTC' ? 'UTC' : '纽约时间'}）`;
+    document.getElementById('p-summary').textContent = (info.provisional ? '按现价（盘中，未收盘）：' : '') + st.summary + (st.flags.length ? ' ' + st.flags.join('；') : '');
+    const ps = document.getElementById('p-settled');
+    ps.hidden = !info.provisional;
+    if (info.provisional) ps.textContent = `按最近一次收盘（${R.final.last[0]}，${a.fmt(R.final.last[1])}）：${R.final.summary}`;
+    const pctTxt = v => (v >= 0 ? '+' : '−') + Math.abs(v * 100).toFixed(1) + '%';
+    const kindName = { static: '', target: '目标', confirm: '确认', turn: '初步' };
+    let rows = '<tr><th>价位</th><th>含义</th><th>距现价</th></tr>', placed = false;
+    const price = info.price;
+    const here = `<tr class="here"><td class="n">${a.fmt(price)}</td><td>现价${info.provisional ? '（盘中）' : '（收盘）'}</td><td class="n"></td></tr>`;
+    (st.levels || []).forEach(r => {
+      if (!placed && r.price < price) { rows += here; placed = true; }
+      rows += `<tr class="${r.kind === 'static' ? '' : 'dyn'}"><td class="n">${a.fmt(r.price)}</td><td class="txt">${kindName[r.kind] ? `<span class="tag${r.kind === 'confirm' ? ' key' : ''}">${kindName[r.kind]}</span>` : ''}${esc(r.label)}</td><td class="n">${pctTxt(r.price / price - 1)}</td></tr>`;
+    });
+    if (!placed) rows += here;
+    document.getElementById('p-levels').innerHTML = rows;
+    const today = R.last[0];
+    document.getElementById('p-marks').innerHTML = (st.marks || []).map(([d, l]) => {
+      const dd = Math.round((t(d) - t(today)) / 864e5);
+      return `<div class="ev"><span class="d">${d}</span><span class="note">${esc(l)}${dd < 0 ? '（已过）' : dd === 0 ? '（今天）' : `（还有 ${dd} 天）`}</span></div>`;
+    }).join('') || '<p class="note">当前这一浪没有时间位。</p>';
+    const tagName = { key: '关键', notice: '价位', info: '记录' };
+    document.getElementById('p-events').innerHTML = R.events.length ? R.events.slice(0, 8).map(e => `<div class="ev"><span class="d">${e.date}</span><span class="note"><span class="tag${e.level === 'key' ? ' key' : ''}">${tagName[e.level] || e.level}</span>${esc(e.text.replace(/^(QQQ|BTC) /, ''))}</span></div>`).join('') : '<p class="note">程序开始跟踪以来还没有新的变化。</p>';
+    const turn = current === 'QQQ' ? '5%' : '12%', sw = current === 'QQQ' ? '5%' : '6%';
+    document.getElementById('p-rule').textContent = `规则：当前这一浪从极值反方向走出 ${turn}，记为“可能已结束”；收盘越过这一浪里最后一个反向摆动点（≥${sw} 的摆动），或者没有这种摆动时越过这一浪的起点，才算确认，下一浪随即开始。全部按收盘价判断，盘中价只做参考。数法本身（哪些点已经确定）写在 code/waves/wave_count.json 里。`;
+  }
+
+  function setAsset(name) {
+    current = name;
+    try { localStorage.setItem('wave-asset', name); } catch (e) {}
+    document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.asset === name)));
+    renderText(); draw(); drawTiming();
+    // On narrow screens the main chart scrolls sideways; start at the right end, where the current waves are.
+    box.parentElement.scrollLeft = box.parentElement.scrollWidth;
+  }
+  document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => setAsset(b.dataset.asset)));
+  function syncControls() {
+    document.querySelectorAll('#deg button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.deg) === degree)));
+    document.querySelectorAll('#rng button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.rng === range)));
+  }
+  document.querySelectorAll('#deg button').forEach(b => b.addEventListener('click', () => {
+    degree = Number(b.dataset.deg); try { localStorage.setItem('wave-degree', String(degree)); } catch (e) {}
+    syncControls(); draw(); renderWaveTable();
+  }));
+  document.querySelectorAll('#rng button').forEach(b => b.addEventListener('click', () => {
+    range = b.dataset.rng; try { localStorage.setItem('wave-range', range); } catch (e) {}
+    syncControls(); draw();
+  }));
+  syncControls();
+  document.getElementById('show-fib').addEventListener('change', draw);
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { draw(); drawTiming(); }, 120); });
+  setAsset(current);
+})();
+</script>

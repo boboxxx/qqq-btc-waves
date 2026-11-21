@@ -1,0 +1,155 @@
+{
+ "_note": "Past declines used for the comparison table (computed 2026-11-21 by research script; NDX since 1985 for QQQ, BTC-USD since 2014-09). Static: not recomputed by the tracker.",
+ "QQQ": {
+  "histStart": "1985-10-01",
+  "thr": 0.199,
+  "eps": [
+   {
+    "peak": "1987-10-05",
+    "trough": "1987-10-26",
+    "depth": -0.399349868957538,
+    "days_to_trough": 21,
+    "days_to_hit": 14,
+    "rows_hit_to_trough": 5,
+    "more_after_hit": -0.1749116088165904,
+    "ongoing": false
+   },
+   {
+    "peak": "1990-07-16",
+    "trough": "1990-10-11",
+    "depth": -0.3289665600819951,
+    "days_to_trough": 87,
+    "days_to_hit": 32,
+    "rows_hit_to_trough": 38,
+    "more_after_hit": -0.16078637354371184,
+    "ongoing": false
+   },
+   {
+    "peak": "1998-07-20",
+    "trough": "1998-10-08",
+    "depth": -0.22990129300147366,
+    "days_to_trough": 80,
+    "days_to_hit": 42,
+    "rows_hit_to_trough": 27,
+    "more_after_hit": -0.010049600365673594,
+    "ongoing": false
+   },
+   {
+    "peak": "2000-03-27",
+    "trough": "2002-10-07",
+    "depth": -0.8289721157242125,
+    "days_to_trough": 924,
+    "days_to_hit": 16,
+    "rows_hit_to_trough": 622,
+    "more_after_hit": -0.7785575194505967,
+    "ongoing": false
+   },
+   {
+    "peak": "2007-10-31",
+    "trough": "2008-11-20",
+    "depth": -0.5370615106846008,
+    "days_to_trough": 386,
+    "days_to_hit": 84,
+    "rows_hit_to_trough": 211,
+    "more_after_hit": -0.42079205556953936,
+    "ongoing": false
+   },
+   {
+    "peak": "2018-08-29",
+    "trough": "2018-12-24",
+    "depth": -0.22986797147306204,
+    "days_to_trough": 117,
+    "days_to_hit": 114,
+    "rows_hit_to_trough": 1,
+    "more_after_hit": -0.02434606776596493,
+    "ongoing": false
+   },
+   {
+    "peak": "2020-02-19",
+    "trough": "2020-03-20",
+    "depth": -0.2803288390852875,
+    "days_to_trough": 30,
+    "days_to_hit": 22,
+    "rows_hit_to_trough": 6,
+    "more_after_hit": -0.03708326625080538,
+    "ongoing": false
+   },
+   {
+    "peak": "2021-11-19",
+    "trough": "2022-12-28",
+    "depth": -0.3556313969041488,
+    "days_to_trough": 404,
+    "days_to_hit": 109,
+    "rows_hit_to_trough": 204,
+    "more_after_hit": -0.19508189035018542,
+    "ongoing": false
+   },
+   {
+    "peak": "2025-02-19",
+    "trough": "2025-04-08",
+    "depth": -0.2293150718955158,
+    "days_to_trough": 48,
+    "days_to_hit": 44,
+    "rows_hit_to_trough": 2,
+    "more_after_hit": -0.01766318777334741,
+    "ongoing": false
+   }
+  ]
+ },
+ "BTC": {
+  "histStart": "2014-09-17",
+  "thr": 0.5,
+  "eps": [
+   {
+    "peak": "2014-09-17",
+    "trough": "2015-01-14",
+    "depth": -0.610562540667337,
+    "days_to_trough": 119,
+    "days_to_hit": 118,
+    "rows_hit_to_trough": 1,
+    "more_after_hit": -0.21144862196566871,
+    "ongoing": false
+   },
+   {
+    "peak": "2017-12-16",
+    "trough": "2018-12-15",
+    "depth": -0.8339900882218974,
+    "days_to_trough": 364,
+    "days_to_hit": 47,
+    "rows_hit_to_trough": 317,
+    "more_after_hit": -0.6470478614167969,
+    "ongoing": false
+   },
+   {
+    "peak": "2021-04-13",
+    "trough": "2021-07-20",
+    "depth": -0.5306185040984174,
+    "days_to_trough": 98,
+    "days_to_hit": 69,
+    "rows_hit_to_trough": 29,
+    "more_after_hit": -0.05901328405452866,
+    "ongoing": false
+   },
+   {
+    "peak": "2021-11-08",
+    "trough": "2022-11-21",
+    "depth": -0.7663456370856909,
+    "days_to_trough": 378,
+    "days_to_hit": 182,
+    "rows_hit_to_trough": 196,
+    "more_after_hit": -0.478915120126044,
+    "ongoing": false
+   },
+   {
+    "peak": "2025-10-06",
+    "trough": "2026-06-30",
+    "depth": -0.5305998300134691,
+    "days_to_trough": 267,
+    "days_to_hit": 242,
+    "rows_hit_to_trough": 25,
+    "more_after_hit": -0.03880014898498052,
+    "ongoing": true
+   }
+  ]
+ }
+}

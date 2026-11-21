@@ -1,0 +1,4 @@
+_site/
+__pycache__/
+data/waves/*.html
+data/waves/wave_status.json

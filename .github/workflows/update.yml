@@ -1,0 +1,65 @@
+name: Update wave page
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"   # every 30 minutes; GitHub may start scheduled runs a few minutes late
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write   # save the wave state and event log back to the repo
+  pages: write
+  id-token: write
+
+concurrency:
+  group: wave-page
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Update wave status and page
+        id: track
+        continue-on-error: true   # a failed price download keeps the last published page instead of failing the job
+        run: python code/wave_tracker.py
+
+      - name: Save state when a new close changed it
+        if: steps.track.outcome == 'success'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/waves/wave_state.json
+          [ -f data/waves/wave_events.csv ] && git add data/waves/wave_events.csv
+          if ! git diff --cached --quiet; then
+            git commit -m "Wave state after new close"
+            git pull --rebase --quiet
+            git push
+          fi
+
+      - name: Collect site
+        if: steps.track.outcome == 'success'
+        run: mkdir -p _site && cp data/waves/index.html _site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.track.outcome == 'success'
+        with:
+          path: _site
+
+      - id: deploy
+        if: steps.track.outcome == 'success'
+        uses: actions/deploy-pages@v4
