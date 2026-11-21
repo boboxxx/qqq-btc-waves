@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy_retry.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -60,6 +60,16 @@ jobs:
         with:
           path: _site
 
+      # deploy-pages sometimes reports "No artifacts named github-pages" right after a successful upload; wait and try again
       - id: deploy
         if: steps.track.outcome == 'success'
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Wait before retrying the deploy
+        if: steps.track.outcome == 'success' && steps.deploy.outcome == 'failure'
+        run: sleep 45
+
+      - id: deploy_retry
+        if: steps.track.outcome == 'success' && steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v4
