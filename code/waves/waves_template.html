@@ -56,7 +56,7 @@ tr.lv2 td { color: var(--ink-2); font-size: 13px; }
 .stat .s { font-size: 13px; color: var(--ink-2); }
 .panel { background: var(--surface); border: 1px solid var(--hair); border-radius: 12px; padding: 14px 6px 10px; }
 .chart-scroll { overflow-x: auto; position: relative; }
-.chart-box { position: relative; min-width: 680px; }
+.chart-box { position: relative; }
 svg { display: block; width: 100%; height: auto; font-family: var(--font); }
 .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--hair); border-radius: 8px; padding: 7px 10px; font-size: 13px; line-height: 1.45; box-shadow: 0 2px 10px rgba(0,0,0,0.12); white-space: nowrap; }
 .tip .d { color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -97,6 +97,27 @@ td.txt { white-space: normal; min-width: 12em; }
 html.public .private { display: none !important; }
 .static-note { color: var(--muted); font-size: 13px; margin: -4px 0 8px; }
 tr.now td { font-weight: 650; }
+.chart-bar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 0 8px 10px; }
+.zoom { display: inline-flex; gap: 6px; }
+.ibtn { font: inherit; font-size: 14px; font-weight: 650; min-width: 34px; height: 32px; padding: 0 10px; border: 1px solid var(--hair); border-radius: 8px; background: var(--surface); color: var(--ink); cursor: pointer; }
+.ibtn:hover { border-color: var(--axis); }
+.ibtn[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.ibtn:focus-visible { outline: 2px solid var(--price); outline-offset: 2px; }
+#chart { touch-action: pan-y; cursor: crosshair; user-select: none; -webkit-user-select: none; }
+#chart.panning { cursor: grabbing; }
+#nav { display: block; width: 100%; height: auto; margin-top: 6px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.toast { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); background: var(--ink); color: var(--surface); font-size: 13px; padding: 6px 12px; border-radius: 8px; pointer-events: none; opacity: 0.92; white-space: nowrap; }
+.hint { padding: 6px 12px 0; font-size: 13px; color: var(--muted); }
+.fs-only { display: none !important; }
+.panel.fs .fs-only { display: inline-flex !important; }
+.panel.fs { position: fixed; inset: 0; z-index: 100; border: 0; border-radius: 0; display: flex; flex-direction: column; padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
+.panel.fs .chart-scroll { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.panel.fs .chart-box { height: 100%; }
+.panel.fs #chart { height: 100%; }
+.panel.fs .legend, .panel.fs #sub-hint { display: none; }
+html.fs-lock, html.fs-lock body { overflow: hidden; }
+@media (max-height: 520px) { .panel.fs .chart-bar .toggle, .panel.fs .hint { display: none; } .panel.fs .chart-bar { padding-bottom: 6px; } }
+.static-note.stale { color: var(--ink); background: var(--corr-wash); border-left: 3px solid var(--corr); padding: 6px 10px; border-radius: 0 6px 6px 0; }
 </style>
 
 <div class="wrap">
@@ -110,9 +131,6 @@ tr.now td { font-weight: 650; }
       <button type="button" id="tab-qqq" data-asset="QQQ" aria-pressed="true">QQQ</button>
       <button type="button" id="tab-btc" data-asset="BTC" aria-pressed="false">BTC</button>
     </div>
-    <div class="tabs small" role="group" aria-label="浪的级别" id="deg"><button type="button" data-deg="0">大浪</button><button type="button" data-deg="1">中浪</button><button type="button" data-deg="2">小浪</button></div>
-    <div class="tabs small" role="group" aria-label="时间范围" id="rng"><button type="button" data-rng="all">全部</button><button type="button" data-rng="1y">近一年</button><button type="button" data-rng="6m">近半年</button><button type="button" data-rng="3m">近三月</button></div>
-    <label class="toggle" for="show-fib"><input type="checkbox" id="show-fib" checked> 回撤位与支撑区</label>
   </div>
 
   <div class="status" id="status"></div>
@@ -131,8 +149,17 @@ tr.now td { font-weight: 650; }
     <p class="note" id="p-rule"></p>
   </section>
 
-  <div class="panel">
-    <div class="chart-scroll"><div class="chart-box" id="chart-box"><svg id="chart" role="img" aria-label="波浪结构图"></svg><div class="tip" id="tip" hidden></div></div></div>
+  <div class="panel" id="chart-panel">
+    <div class="chart-bar">
+      <div class="tabs small fs-only" role="group" aria-label="选择品种"><button type="button" data-asset="QQQ">QQQ</button><button type="button" data-asset="BTC">BTC</button></div>
+      <div class="tabs small" role="group" aria-label="浪的级别" id="deg"><button type="button" data-deg="0">大浪</button><button type="button" data-deg="1">中浪</button><button type="button" data-deg="2">小浪</button></div>
+      <div class="tabs small" role="group" aria-label="时间范围" id="rng"><button type="button" data-rng="all">全部</button><button type="button" data-rng="1y">近一年</button><button type="button" data-rng="6m">近半年</button><button type="button" data-rng="3m">近三月</button></div>
+      <div class="zoom" role="group" aria-label="缩放"><button type="button" class="ibtn" id="z-out" aria-label="缩小" title="缩小">−</button><button type="button" class="ibtn" id="z-in" aria-label="放大" title="放大">＋</button><button type="button" class="ibtn" id="z-full" aria-pressed="false">全屏</button></div>
+      <label class="toggle" for="show-fib"><input type="checkbox" id="show-fib" checked> 回撤位与支撑区</label>
+    </div>
+    <div class="chart-scroll"><div class="chart-box" id="chart-box"><svg id="chart" role="img" aria-label="波浪结构图"></svg><div class="tip" id="tip" hidden></div><div class="toast" id="chart-toast" hidden></div></div></div>
+    <svg id="nav" aria-label="全程缩略图：拖动框选择显示的时间段"></svg>
+    <p class="hint" id="zoom-hint"></p>
     <p class="note" id="sub-hint" style="padding:0 12px"></p>
     <div class="legend" id="legend">
       <span><i class="sw" style="border-color:var(--price)"></i>日收盘价</span>
@@ -145,15 +172,15 @@ tr.now td { font-weight: 650; }
   </div>
 
   <div class="cols">
-    <section class="card"><h2>这一段怎么数</h2><p class="static-note">2026-11-21 写的解读，进度以上面“最新进度”为准。</p><ol class="waves" id="story"></ol></section>
-    <section class="card"><h2>接下来看哪些价位</h2><p class="static-note">2026-11-21 写的解读，进度以上面“最新进度”为准。</p><div class="levels" id="levels"></div></section>
+    <section class="card"><h2>这一段怎么数</h2><p class="static-note" data-stale></p><ol class="waves" id="story"></ol></section>
+    <section class="card"><h2>接下来看哪些价位</h2><p class="static-note" data-stale></p><div class="levels" id="levels"></div></section>
   </div>
 
   <section class="card" style="display:grid;gap:14px">
     <div style="display:grid;gap:6px">
       <h2 style="margin:0">什么时候结束</h2>
       <p class="note" id="t-lede"></p>
-      <p class="static-note" style="margin:0">图里的价格、时间位随进度自动更新；下面的文字和检验是 2026-11-21 做的。</p>
+      <p class="static-note" data-stale="timing" style="margin:0"></p>
     </div>
     <div class="panel" style="padding-top:10px">
       <div class="chart-scroll"><div class="chart-box" id="tchart-box" style="min-width:640px"><svg id="tchart" role="img" aria-label="时间窗口图"></svg><div class="tip" id="ttip" hidden></div></div></div>
@@ -334,6 +361,9 @@ tr.now td { font-weight: 650; }
   };
 
   const t = s => Date.parse(s + 'T00:00:00Z');
+  // when the hand-written notes were written, and which leg the tracker was in then
+  ASSETS.QQQ.written = { date: '2026-11-21', leg: 'A', state: 'running' };
+  ASSETS.BTC.written = { date: '2026-11-21', leg: 'C', state: 'running' };
   // Live progress from code/wave_tracker.py replaces the hand-written correction points.
   Object.keys(ASSETS).forEach(name => {
     const st = RAW[name].status, a = ASSETS[name], px = new Map(RAW[name].series);
@@ -394,11 +424,12 @@ tr.now td { font-weight: 650; }
     return parts.join(' › ');
   }
 
-  let degree = 1, range = 'all';
+  let degree = 1, range = 'all', view = null, fs = false;
   try {
     const g = Number(localStorage.getItem('wave-degree')); if ([0, 1, 2].includes(g) && localStorage.getItem('wave-degree') !== null) degree = g;
     const r = localStorage.getItem('wave-range'); if (['all', '1y', '6m', '3m'].includes(r)) range = r;
   } catch (e) {}
+  const fine = window.matchMedia && matchMedia('(pointer: fine)').matches;
 
   function logTicks(lo, hi) {
     if (hi / lo < 2.2) return niceTicks(lo, hi, 5);
@@ -410,55 +441,110 @@ tr.now td { font-weight: 650; }
     return niceTicks(lo, hi, 5);
   }
 
+  // Time window of the main chart. `view` holds {t0, t1} (ms) while zoomed or panned; otherwise the preset in `range` applies.
+  const DAY = 864e5, MIN_SPAN = 21 * DAY;
+  const iso = ms => new Date(ms).toISOString().slice(0, 10);
+  function extent() { const s = RAW[current].series; return { first: t(s[0][0]), end: t(s[s.length - 1][0]) }; }
+  function presetView(r) {
+    const { first, end } = extent();
+    const months = { all: 0, '1y': 12, '6m': 6, '3m': 3 }[r] || 0;
+    const t0 = months ? Math.max(first, end - months * 30.44 * DAY) : first;
+    return { t0, t1: end + (end - t0) * 0.02 + 2 * DAY };
+  }
+  function clampView(t0, t1) {
+    const { first, end } = extent(), full = presetView('all');
+    const span = Math.min(Math.max(t1 - t0, MIN_SPAN), full.t1 - full.t0);
+    const maxT = Math.min(full.t1, end + span * 0.02 + 2 * DAY);
+    if (t0 < first) t0 = first;
+    if (t0 + span > maxT) t0 = maxT - span;
+    if (t0 < first) t0 = first;
+    return { t0, t1: t0 + span };
+  }
+  const curView = () => view || presetView(range);
+  let raf = 0;
+  function redraw() { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); }
+  function setView(v) {
+    const c = clampView(v.t0, v.t1), full = presetView('all');
+    view = c.t1 - c.t0 >= full.t1 - full.t0 - DAY ? null : c;
+    if (!view) range = 'all';
+    syncControls(); redraw();
+  }
+  function zoomAt(T, f) { const v = curView(); setView({ t0: T - (T - v.t0) * f, t1: T + (v.t1 - T) * f }); }
+  // buttons zoom around the latest close when it is on screen, otherwise around the middle
+  function zoomBy(f) { const v = curView(), { end } = extent(); zoomAt(v.t1 >= end && v.t0 <= end ? end : (v.t0 + v.t1) / 2, f); }
+
+  // x-axis ticks for any window: years, half-years, months or weeks, thinned so labels keep minGap px apart
+  function timeTicks(t0, t1, X, minGap) {
+    const span = (t1 - t0) / DAY, out = [], d0 = new Date(t0);
+    if (span > 1100) {
+      for (let y = d0.getUTCFullYear() + 1; Date.UTC(y, 0, 1) <= t1; y++) out.push([X(Date.UTC(y, 0, 1)), String(y)]);
+    } else if (span > 75) {
+      const step = span > 540 ? 6 : span > 240 ? 2 : 1;
+      for (let y = d0.getUTCFullYear(), m = d0.getUTCMonth() + 1; ; m++) {
+        if (m > 11) { m = 0; y++; }
+        if (Date.UTC(y, m, 1) > t1) break;
+        if (m % step) continue;
+        out.push([X(Date.UTC(y, m, 1)), m === 0 ? y + ' 年' : (m + 1) + ' 月']);
+      }
+    } else {
+      const s = Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth(), d0.getUTCDate());
+      for (let ts = s + ((8 - new Date(s).getUTCDay()) % 7) * DAY; ts <= t1; ts += 7 * DAY) {
+        const d = new Date(ts); out.push([X(ts), (d.getUTCMonth() + 1) + '-' + d.getUTCDate()]);
+      }
+    }
+    if (out.length < 2) return out;
+    const k = Math.max(1, Math.ceil(minGap / ((out[out.length - 1][0] - out[0][0]) / (out.length - 1))));
+    return out.filter((_, i) => i % k === 0);
+  }
+
+  let G = null;
   function draw() {
     const a = ASSETS[current], all = RAW[current].series;
-    const endT = t(all[all.length - 1][0]);
-    const months = { all: 0, '1y': 12, '6m': 6, '3m': 3 }[range];
-    const t0 = months ? endT - months * 30.44 * 864e5 : t(all[0][0]);
-    const series = all.filter(p => t(p[0]) >= t0);
-    const t1 = endT + (endT - t0) * 0.02 + 2 * 864e5;
-    let vmin = Math.min(...series.map(p => p[1])), vmax = Math.max(...series.map(p => p[1]));
-    if (range === 'all') { vmin = Math.min(vmin, a.yMin); vmax = Math.max(vmax, a.yMax); }
-    else { const pad = Math.log(vmax / vmin) * 0.14; vmin /= Math.exp(pad); vmax *= Math.exp(pad); }
-    const ticks = range === 'all' ? a.ticks : logTicks(vmin, vmax);
-    const W = Math.max(box.clientWidth, 680), H = Math.round(Math.min(560, Math.max(380, W * 0.52)));
-    const ml = 52, mr = 112, mt = 30, mb = 30, xr = W - mr;
+    const { t0, t1 } = curView(), isAll = !view && range === 'all';
+    const W = Math.max(280, box.clientWidth), narrow = W < 560;
+    const H = fs ? Math.max(220, box.clientHeight) : Math.round(Math.min(560, Math.max(narrow ? 340 : 380, W * 0.52)));
+    const ml = narrow ? 40 : 52, mr = narrow ? 86 : 112, mt = 30, mb = 30, xr = W - mr, fsz = narrow ? 10 : 11;
+    let i0 = all.findIndex(p => t(p[0]) >= t0); if (i0 < 0) i0 = all.length - 1;
+    let i1 = all.length - 1; while (i1 > 0 && t(all[i1][0]) > t1) i1--;
+    let inside = all.slice(i0, i1 + 1); if (!inside.length) inside = all.slice(-1);
+    const drawn = all.slice(Math.max(0, i0 - 1), Math.min(all.length, i1 + 2)); // one more point each side so the line reaches the edges
+    let vmin = Math.min(...inside.map(p => p[1])), vmax = Math.max(...inside.map(p => p[1]));
+    if (isAll) { vmin = Math.min(vmin, a.yMin); vmax = Math.max(vmax, a.yMax); }
+    else { const pad = Math.max(Math.log(vmax / vmin), 0.03) * 0.14; vmin /= Math.exp(pad); vmax *= Math.exp(pad); }
+    const ticks = isAll ? a.ticks : logTicks(vmin, vmax);
     const lmin = Math.log(vmin), lmax = Math.log(vmax);
-    const X = d => ml + (t(d) - t0) / (t1 - t0) * (W - ml - mr);
+    const tt = d => (typeof d === 'number' ? d : t(d));
+    const X = d => ml + (tt(d) - t0) / (t1 - t0) * (xr - ml);
     const Y = v => mt + (lmax - Math.log(v)) / (lmax - lmin) * (H - mt - mb);
-    const inX = d => t(d) >= t0 && t(d) <= t1, inY = v => v >= vmin && v <= vmax;
+    const inX = d => tt(d) >= t0 && tt(d) <= t1, inY = v => v >= vmin && v <= vmax;
     const showFib = document.getElementById('show-fib').checked;
     const halo = 'paint-order="stroke" stroke="var(--surface)" stroke-width="3.5" stroke-linejoin="round"';
     let s = `<defs><clipPath id="plotclip"><rect x="${ml}" y="${mt - 2}" width="${xr - ml}" height="${H - mt - mb + 4}"></rect></clipPath></defs>`;
-    if (range === 'all') {
-      const x3 = X('2023-11-20');
-      s += `<rect x="${ml}" y="${mt}" width="${x3 - ml}" height="${H - mt - mb}" fill="var(--pre-wash)"></rect><line x1="${x3}" x2="${x3}" y1="${mt}" y2="${H - mb}" stroke="var(--axis)" stroke-width="1"></line><text x="${x3 + 6}" y="${mt + 12}" font-size="12" fill="var(--muted)">近三年 →</text>`;
-    }
-    ticks.forEach(v => { const y = Y(v); s += `<line x1="${ml}" x2="${xr}" y1="${y}" y2="${y}" stroke="var(--grid)" stroke-width="1"></line><text x="${ml - 8}" y="${y + 4}" font-size="11" text-anchor="end" fill="var(--muted)" style="font-variant-numeric:tabular-nums">${a.tickFmt(Math.round(v * 100) / 100)}</text>`; });
-    const spanDays = (t1 - t0) / 864e5;
-    if (spanDays > 540) {
-      for (let yr = new Date(t0).getUTCFullYear() + 1; Date.UTC(yr, 0, 1) <= t1; yr++) { const x = X(yr + '-01-01'); s += `<line x1="${x}" x2="${x}" y1="${H - mb}" y2="${H - mb + 4}" stroke="var(--axis)"></line><text x="${x}" y="${H - mb + 18}" font-size="11" text-anchor="middle" fill="var(--muted)">${yr}</text>`; }
-    } else {
-      const step = spanDays > 240 ? 2 : 1, f = new Date(t0);
-      for (let y = f.getUTCFullYear(), m = f.getUTCMonth() + 1; Date.UTC(y, m, 1) <= t1; m++) {
-        if (m > 11) { m = 0; y++; }
-        if (m % step) continue;
-        const x = ml + (Date.UTC(y, m, 1) - t0) / (t1 - t0) * (W - ml - mr);
-        s += `<line x1="${x}" x2="${x}" y1="${H - mb}" y2="${H - mb + 4}" stroke="var(--axis)"></line><text x="${x}" y="${H - mb + 18}" font-size="11" text-anchor="middle" fill="var(--muted)">${m === 0 ? y + ' 年 1 月' : (m + 1) + ' 月'}</text>`;
-      }
-    }
+    if (view) s += `<text x="${ml}" y="15" font-size="11" fill="var(--muted)" style="font-variant-numeric:tabular-nums">${iso(t0)} 至 ${iso(Math.min(t1, extent().end))}${fine ? '　双击复位' : ''}</text>`;
+    ticks.forEach(v => { const y = Y(v); s += `<line x1="${ml}" x2="${xr}" y1="${y}" y2="${y}" stroke="var(--grid)" stroke-width="1"></line><text x="${ml - 7}" y="${y + 4}" font-size="${fsz}" text-anchor="end" fill="var(--muted)" style="font-variant-numeric:tabular-nums">${a.tickFmt(Math.round(v * 100) / 100)}</text>`; });
+    timeTicks(t0, t1, X, narrow ? 50 : 62).forEach(([x, lab]) => {
+      if (x < ml - 1 || x > xr + 1) return;
+      s += `<line x1="${x}" x2="${x}" y1="${H - mb}" y2="${H - mb + 4}" stroke="var(--axis)"></line><text x="${x}" y="${H - mb + 18}" font-size="${fsz}" text-anchor="middle" fill="var(--muted)">${lab}</text>`;
+    });
     s += `<line x1="${ml}" x2="${xr}" y1="${H - mb}" y2="${H - mb}" stroke="var(--axis)" stroke-width="1"></line>`;
     s += '<g clip-path="url(#plotclip)">';
-    let margin = [];
+    const x3 = X('2023-11-20');
+    if (x3 > ml) {
+      s += `<rect x="${ml}" y="${mt}" width="${Math.min(x3, xr) - ml}" height="${H - mt - mb}" fill="var(--pre-wash)"></rect>`;
+      if (x3 < xr) s += `<line x1="${x3}" x2="${x3}" y1="${mt}" y2="${H - mb}" stroke="var(--axis)" stroke-width="1"></line>` + (x3 < xr - 70 ? `<text x="${x3 + 6}" y="${mt + 12}" font-size="12" fill="var(--muted)">近三年 →</text>` : '');
+    }
+    const margin = [];
     if (showFib) {
       const xz = Math.max(ml, X(a.zoneFrom));
-      const zy1 = Y(a.zone[1]), zy0 = Y(a.zone[0]);
-      s += `<rect x="${xz}" y="${zy1}" width="${xr - xz}" height="${zy0 - zy1}" fill="var(--corr-wash)"></rect>`;
-      if (inY(a.zone[0]) || inY(a.zone[1])) margin.push([(Math.max(zy1, mt) + Math.min(zy0, H - mb)) / 2, a.zoneShort || a.zone[2]]);
-      a.lines.forEach(([v, lab]) => { if (!inY(v)) return; const y = Y(v); s += `<line x1="${xz}" x2="${xr}" y1="${y}" y2="${y}" stroke="var(--muted)" stroke-width="1" stroke-opacity="0.7"></line>`; if (lab) margin.push([y, lab]); });
+      if (xz < xr) {
+        const zy1 = Y(a.zone[1]), zy0 = Y(a.zone[0]);
+        s += `<rect x="${xz}" y="${zy1}" width="${xr - xz}" height="${zy0 - zy1}" fill="var(--corr-wash)"></rect>`;
+        if (inY(a.zone[0]) || inY(a.zone[1])) margin.push([(Math.max(zy1, mt) + Math.min(zy0, H - mb)) / 2, a.zoneShort || a.zone[2]]);
+        a.lines.forEach(([v, lab]) => { if (!inY(v)) return; const y = Y(v); s += `<line x1="${xz}" x2="${xr}" y1="${y}" y2="${y}" stroke="var(--muted)" stroke-width="1" stroke-opacity="0.7"></line>`; if (lab) margin.push([y, lab]); });
+      }
     }
     let dpath = '';
-    series.forEach(([d, v], i) => { dpath += (i ? 'L' : 'M') + X(d).toFixed(1) + ' ' + Y(v).toFixed(1); });
+    drawn.forEach(([d, v], i) => { dpath += (i ? 'L' : 'M') + X(d).toFixed(1) + ' ' + Y(v).toFixed(1); });
     s += `<path d="${dpath}" fill="none" stroke="var(--price)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>`;
     const poly = pts => 'M' + pts.map(p => X(p[0]).toFixed(1) + ' ' + Y(p[p.length - 1]).toFixed(1)).join(' L');
     s += `<path d="${poly(a.big.map(p => [p[0], p[2]]))}" fill="none" stroke="var(--ink-2)" stroke-width="1.5" stroke-opacity="${degree ? 0.45 : 0.85}"></path>`;
@@ -468,19 +554,21 @@ tr.now td { font-weight: 650; }
     s += '</g>';
     margin.sort((p, q) => p[0] - q[0]);
     for (let i = 1; i < margin.length; i++) if (margin[i][0] - margin[i - 1][0] < 13) margin[i][0] = margin[i - 1][0] + 13;
-    margin.forEach(([y, lab]) => { s += `<text x="${xr + 6}" y="${y + 4}" font-size="11" fill="var(--ink-2)" style="font-variant-numeric:tabular-nums">${esc(lab)}</text>`; });
+    margin.forEach(([y, lab]) => { s += `<text x="${xr + 5}" y="${y + 4}" font-size="${fsz}" fill="var(--ink-2)" style="font-variant-numeric:tabular-nums">${esc(lab)}</text>`; });
     if (!window.WAVES_PUBLIC && a.sold && inX(a.sold[0])) { const [d, v, lab] = a.sold, x = X(d), y = Y(v); s += `<path d="M${x} ${y - 6} L${x + 6} ${y} L${x} ${y + 6} L${x - 6} ${y} Z" fill="var(--ink)" stroke="var(--surface)" stroke-width="2"></path><text x="${x - 10}" y="${y + 20}" font-size="11.5" text-anchor="end" fill="var(--ink)" ${halo}>${esc(lab)}</text>`; }
+    const lp = all[all.length - 1];
+    if (inX(lp[0]) && !a.corr.some(p => p[0] === lp[0])) s += `<circle cx="${X(lp[0])}" cy="${Y(lp[1])}" r="3.5" fill="var(--price)" stroke="var(--surface)" stroke-width="2"></circle>`;
     // sub-wave labels, finest first so the bigger ones draw on top; crowded labels are skipped (zoom in to see them)
     let skipped = 0;
     for (let lv = degree; lv >= 1; lv--) {
-      const gap = lv === 2 ? 13 : 18, fs = lv === 2 ? 10.5 : 12, last = { hi: -1e9, lo: -1e9 };
+      const gap = lv === 2 ? 13 : 18, fs2 = lv === 2 ? 10.5 : 12, last = { hi: -1e9, lo: -1e9 };
       levelPivots(a.tree, lv).forEach(([d, lab, v, k]) => {
         if (!inX(d) || !inY(v)) return;
         const x = X(d);
         if (x - last[k] < gap) { skipped++; return; }
         last[k] = x;
         const y = Y(v) + (k === 'hi' ? (lv === 2 ? -7 : -9) : (lv === 2 ? 15 : 18));
-        s += `<circle cx="${x}" cy="${Y(v)}" r="${lv === 2 ? 2 : 2.6}" fill="var(--ink-2)"></circle><text x="${x}" y="${y}" font-size="${fs}" font-weight="${lv === 1 ? 650 : 500}" text-anchor="middle" fill="${lv === 1 ? 'var(--ink)' : 'var(--ink-2)'}" ${halo}>${esc(lab)}</text>`;
+        s += `<circle cx="${x}" cy="${Y(v)}" r="${lv === 2 ? 2 : 2.6}" fill="var(--ink-2)"></circle><text x="${x}" y="${y}" font-size="${fs2}" font-weight="${lv === 1 ? 650 : 500}" text-anchor="middle" fill="${lv === 1 ? 'var(--ink)' : 'var(--ink-2)'}" ${halo}>${esc(lab)}</text>`;
       });
     }
     const badge = (d, lab, v, k, ring) => {
@@ -490,34 +578,63 @@ tr.now td { font-weight: 650; }
     };
     a.big.forEach(([d, lab, v, k]) => { s += badge(d, lab, v, k, 'var(--ink-2)'); });
     a.corr.forEach(([d, lab, v, k]) => { s += badge(d, lab, v, k, 'var(--corr)'); });
-    document.getElementById('sub-hint').textContent = skipped ? `这个范围里还有 ${skipped} 个${degree === 2 ? '小浪' : '中浪'}标注挤在一起没画出来，选“近半年”或“近三月”可以看清。` : '';
+    document.getElementById('sub-hint').textContent = skipped ? `这个范围里还有 ${skipped} 个${degree === 2 ? '小浪' : '中浪'}标注挤在一起没画出来，放大就能看到。` : '';
     s += `<line id="cross" x1="0" x2="0" y1="${mt}" y2="${H - mb}" stroke="var(--ink-2)" stroke-width="1" visibility="hidden"></line><circle id="hdot" r="4.5" fill="var(--price)" stroke="var(--surface)" stroke-width="2" visibility="hidden"></circle>`;
-    s += `<rect id="hit" x="${ml}" y="${mt}" width="${xr - ml}" height="${H - mt - mb}" fill="transparent"></rect>`;
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-    svg.setAttribute('aria-label', current + ' 波浪结构图，日收盘价，对数坐标');
+    svg.setAttribute('aria-label', current + ' 波浪结构图，日收盘价，对数坐标，' + iso(t0) + ' 至 ' + iso(Math.min(t1, extent().end)));
     svg.innerHTML = s;
-    const xs = series.map(p => X(p[0]));
-    const hit = svg.querySelector('#hit'), cross = svg.querySelector('#cross'), hdot = svg.querySelector('#hdot');
-    function move(clientX) {
-      const r = svg.getBoundingClientRect(), sx = (clientX - r.left) * (W / r.width);
-      let lo = 0, hi = xs.length - 1;
-      while (hi - lo > 1) { const m = (lo + hi) >> 1; if (xs[m] < sx) lo = m; else hi = m; }
-      const i = Math.abs(xs[lo] - sx) < Math.abs(xs[hi] - sx) ? lo : hi;
-      const [d, v] = series[i], x = xs[i], y = Y(v);
-      cross.setAttribute('x1', x); cross.setAttribute('x2', x); cross.setAttribute('visibility', 'visible');
-      hdot.setAttribute('cx', x); hdot.setAttribute('cy', y); hdot.setAttribute('visibility', 'visible');
-      tip.innerHTML = `<div class="d">${d}</div><div class="p">${a.fmt(v)}</div><div>${esc(segmentName(a, d))}</div>`;
-      tip.hidden = false;
-      const scale = r.width / W, px = x * scale, py = y * scale;
-      const tw = tip.offsetWidth, bw = box.clientWidth;
-      tip.style.left = (px + 14 + tw > bw ? Math.max(4, px - tw - 14) : px + 14) + 'px';
-      tip.style.top = Math.max(4, py - tip.offsetHeight - 12) + 'px';
-    }
-    function leave() { cross.setAttribute('visibility', 'hidden'); hdot.setAttribute('visibility', 'hidden'); tip.hidden = true; }
-    hit.addEventListener('mousemove', e => move(e.clientX));
-    hit.addEventListener('mouseleave', leave);
-    hit.addEventListener('touchstart', e => move(e.touches[0].clientX), { passive: true });
-    hit.addEventListener('touchmove', e => move(e.touches[0].clientX), { passive: true });
+    G = { a, W, H, ml, xr, mt, mb, t0, t1, series: inside, xs: inside.map(p => X(p[0])), Y };
+    drawNav();
+  }
+
+  const svgX = (el, W, clientX) => { const r = el.getBoundingClientRect(); return (clientX - r.left) * (W / r.width); };
+  const tAt = sx => G.t0 + (sx - G.ml) / (G.xr - G.ml) * (G.t1 - G.t0);
+  function hideTip() {
+    const c = svg.querySelector('#cross'), d = svg.querySelector('#hdot');
+    if (c) c.setAttribute('visibility', 'hidden');
+    if (d) d.setAttribute('visibility', 'hidden');
+    tip.hidden = true;
+  }
+  function showTip(clientX) {
+    if (!G || !G.xs.length) return;
+    const sx = svgX(svg, G.W, clientX), xs = G.xs;
+    let lo = 0, hi = xs.length - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (xs[m] < sx) lo = m; else hi = m; }
+    const i = Math.abs(xs[lo] - sx) < Math.abs(xs[hi] - sx) ? lo : hi;
+    const [d, v] = G.series[i], x = xs[i], y = G.Y(v);
+    const cross = svg.querySelector('#cross'), hdot = svg.querySelector('#hdot');
+    cross.setAttribute('x1', x); cross.setAttribute('x2', x); cross.setAttribute('visibility', 'visible');
+    hdot.setAttribute('cx', x); hdot.setAttribute('cy', y); hdot.setAttribute('visibility', 'visible');
+    tip.innerHTML = `<div class="d">${d}</div><div class="p">${G.a.fmt(v)}</div><div>${esc(segmentName(G.a, d))}</div>`;
+    tip.hidden = false;
+    const scale = svg.getBoundingClientRect().width / G.W, px = x * scale, py = y * scale;
+    const tw = tip.offsetWidth, bw = box.clientWidth;
+    tip.style.left = (px + 14 + tw > bw ? Math.max(4, px - tw - 14) : px + 14) + 'px';
+    tip.style.top = Math.max(4, py - tip.offsetHeight - 12) + 'px';
+  }
+  const toastEl = document.getElementById('chart-toast');
+  let toastT = 0;
+  function toast(msg) { toastEl.textContent = msg; toastEl.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { toastEl.hidden = true; }, 1500); }
+
+  // Overview strip under the chart: the whole history, with the shown window as a box you can drag or resize.
+  const nav = document.getElementById('nav');
+  let NG = null;
+  function drawNav() {
+    const all = RAW[current].series, full = presetView('all'), v = curView();
+    const W = G.W, ml = G.ml, xr = G.xr, NH = 44;
+    const NX = T => ml + (T - full.t0) / (full.t1 - full.t0) * (xr - ml);
+    const vals = all.map(p => p[1]), lo = Math.log(Math.min(...vals)), hi = Math.log(Math.max(...vals));
+    const NY = val => 5 + (hi - Math.log(val)) / (hi - lo) * (NH - 10);
+    let p = '';
+    all.forEach(([d, val], i) => { p += (i ? 'L' : 'M') + NX(t(d)).toFixed(1) + ' ' + NY(val).toFixed(1); });
+    const x0 = Math.max(ml, NX(v.t0)), x1 = Math.min(xr, NX(v.t1));
+    let s = `<rect x="${ml}" y="0.5" width="${xr - ml}" height="${NH - 1}" rx="4" fill="var(--page)" stroke="var(--hair)"></rect>`;
+    s += `<path d="${p}" fill="none" stroke="var(--price)" stroke-width="1.2" stroke-opacity="0.75"></path>`;
+    s += `<rect x="${x0}" y="1" width="${Math.max(2, x1 - x0)}" height="${NH - 2}" rx="3" fill="var(--time-wash)" stroke="var(--ink-2)" stroke-width="1.2"></rect>`;
+    [x0, x1].forEach(x => { s += `<rect x="${x - 4}" y="${NH / 2 - 10}" width="8" height="20" rx="3" fill="var(--surface)" stroke="var(--ink-2)" stroke-width="1.2"></rect>`; });
+    nav.setAttribute('viewBox', `0 0 ${W} ${NH}`);
+    nav.innerHTML = s;
+    NG = { W, ml, xr, x0, x1, inv: x => full.t0 + (x - ml) / (xr - ml) * (full.t1 - full.t0) };
   }
 
   function renderWaveTable() {
@@ -724,30 +841,159 @@ tr.now td { font-weight: 650; }
     document.getElementById('p-rule').textContent = `规则：当前这一浪从极值反方向走出 ${turn}，记为“可能已结束”；收盘越过这一浪里最后一个反向摆动点（≥${sw} 的摆动），或者没有这种摆动时越过这一浪的起点，才算确认，下一浪随即开始。全部按收盘价判断，盘中价只做参考。数法本身（哪些点已经确定）写在 code/waves/wave_count.json 里。`;
   }
 
+  // Hand-written notes are dated; once the tracker moves past the leg they describe, say so above them.
+  function renderStale() {
+    const w = ASSETS[current].written, R = RAW[current], st = R.status, f = R.final || st;
+    const days = Math.round((t(R.last[0]) - t(w.date)) / DAY), flags = st.flags || [];
+    let tail, stale = true;
+    if (flags.length) tail = `之后程序提示：${flags.join('；')}。下面的内容可能已经不成立，以上面的“最新进度”为准。`;
+    else if (f.leg !== w.leg) tail = `当时是 ${w.leg} 浪，现在${f.leg ? `已经进入 ${f.leg} 浪` : ' A-B-C 调整已经走完'}。内容已经过时，只作记录，以上面的“最新进度”为准。`;
+    else if (f.state === 'turned' && w.state !== 'turned') tail = `之后 ${w.leg} 浪出现了可能已经结束的初步信号，内容可能已经过时，以上面的“最新进度”为准。`;
+    else { stale = false; tail = `之后仍在 ${w.leg} 浪里，大方向没变；具体数字以上面的“最新进度”为准。`; }
+    document.querySelectorAll('[data-stale]').forEach(el => {
+      const head = el.dataset.stale === 'timing' ? '图里的价格、时间位随进度自动更新；下面的文字和检验' : '这段解读';
+      el.textContent = `${head}写于 ${w.date}${days > 0 ? `（${days} 天前）` : ''}。${tail}`;
+      el.classList.toggle('stale', stale);
+    });
+  }
+
   function setAsset(name) {
     current = name;
     try { localStorage.setItem('wave-asset', name); } catch (e) {}
-    document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.asset === name)));
-    renderText(); draw(); drawTiming();
-    // On narrow screens the main chart scrolls sideways; start at the right end, where the current waves are.
-    box.parentElement.scrollLeft = box.parentElement.scrollWidth;
+    document.querySelectorAll('[data-asset]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.asset === name)));
+    if (view) view = clampView(view.t0, view.t1);
+    renderText(); renderStale(); draw(); drawTiming();
   }
-  document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => setAsset(b.dataset.asset)));
+  document.querySelectorAll('[data-asset]').forEach(b => b.addEventListener('click', () => setAsset(b.dataset.asset)));
   function syncControls() {
     document.querySelectorAll('#deg button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.deg) === degree)));
-    document.querySelectorAll('#rng button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.rng === range)));
+    document.querySelectorAll('#rng button').forEach(b => b.setAttribute('aria-pressed', String(!view && b.dataset.rng === range)));
   }
   document.querySelectorAll('#deg button').forEach(b => b.addEventListener('click', () => {
     degree = Number(b.dataset.deg); try { localStorage.setItem('wave-degree', String(degree)); } catch (e) {}
     syncControls(); draw(); renderWaveTable();
   }));
   document.querySelectorAll('#rng button').forEach(b => b.addEventListener('click', () => {
-    range = b.dataset.rng; try { localStorage.setItem('wave-range', range); } catch (e) {}
+    range = b.dataset.rng; view = null; try { localStorage.setItem('wave-range', range); } catch (e) {}
     syncControls(); draw();
   }));
   syncControls();
   document.getElementById('show-fib').addEventListener('change', draw);
+  document.getElementById('z-in').addEventListener('click', () => zoomBy(0.6));
+  document.getElementById('z-out').addEventListener('click', () => zoomBy(1 / 0.6));
+
+  // Enlarged view: the chart panel covers the window (works inside an iframe and on iPhone, unlike the Fullscreen API).
+  const panel = document.getElementById('chart-panel'), fsBtn = document.getElementById('z-full');
+  function zoomHint() {
+    document.getElementById('zoom-hint').textContent = fine
+      ? (fs ? '滚动滚轮缩放，按住拖动平移，双击回到原来的范围，按 Esc 退出。'
+            : '放大看细节：点 ＋ / −，或按住 Ctrl 滚动滚轮（Mac 触控板双指捏合）；按住图表左右拖动可以平移，双击回到原来的范围。下面的缩略图也可以拖。')
+      : (fs ? '两指捏合缩放，拖动下面缩略图里的框平移；手机横过来看更清楚。'
+            : '两指捏合缩放，或点 ＋ / −、拖动下面的框；单指按住看每天的数值。点“全屏”后横过来看更清楚。');
+  }
+  function setFs(on) {
+    fs = on;
+    panel.classList.toggle('fs', on);
+    document.documentElement.classList.toggle('fs-lock', on);
+    fsBtn.textContent = on ? '退出全屏' : '全屏';
+    fsBtn.setAttribute('aria-pressed', String(on));
+    hideTip(); toastEl.hidden = true; zoomHint(); draw();
+  }
+  fsBtn.addEventListener('click', () => setFs(!fs));
+  document.addEventListener('keydown', e => {
+    if (!fs || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'Escape') setFs(false);
+    else if (e.key === '+' || e.key === '=') zoomBy(0.6);
+    else if (e.key === '-' || e.key === '_') zoomBy(1 / 0.6);
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { const v = curView(), d = (v.t1 - v.t0) * 0.15 * (e.key === 'ArrowLeft' ? -1 : 1); setView({ t0: v.t0 + d, t1: v.t1 + d }); }
+    else return;
+    e.preventDefault();
+  });
+
+  // Main chart: hover or one finger reads values; mouse drag pans; two fingers pinch; Ctrl + wheel (plain wheel when enlarged) zooms.
+  const ptrs = new Map();
+  let drag = null, pinch = null;
+  const inPlot = clientX => { const sx = svgX(svg, G.W, clientX); return sx >= G.ml && sx <= G.xr; };
+  svg.addEventListener('pointerdown', e => {
+    if (!G || !inPlot(e.clientX) || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    ptrs.set(e.pointerId, e.clientX);
+    try { svg.setPointerCapture(e.pointerId); } catch (err) {}
+    if (ptrs.size === 2) {
+      const [x1, x2] = [...ptrs.values()];
+      pinch = { d: Math.max(Math.abs(x2 - x1), 10), tm: tAt(svgX(svg, G.W, (x1 + x2) / 2)), v: curView() };
+      drag = null; hideTip();
+    } else if (e.pointerType === 'mouse') { drag = { x: e.clientX, v: curView(), moved: false }; }
+    else showTip(e.clientX);
+  });
+  svg.addEventListener('pointermove', e => {
+    if (!G) return;
+    if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, e.clientX);
+    if (pinch && ptrs.size >= 2) {
+      const [x1, x2] = [...ptrs.values()], span = (pinch.v.t1 - pinch.v.t0) * pinch.d / Math.max(Math.abs(x2 - x1), 10);
+      const frac = (svgX(svg, G.W, (x1 + x2) / 2) - G.ml) / (G.xr - G.ml), t0 = pinch.tm - frac * span;
+      setView({ t0, t1: t0 + span });
+      return;
+    }
+    if (drag) {
+      const dx = svgX(svg, G.W, e.clientX) - svgX(svg, G.W, drag.x);
+      if (Math.abs(dx) > 3) drag.moved = true;
+      if (drag.moved) {
+        const dt = dx / (G.xr - G.ml) * (drag.v.t1 - drag.v.t0);
+        svg.classList.add('panning'); hideTip();
+        setView({ t0: drag.v.t0 - dt, t1: drag.v.t1 - dt });
+        return;
+      }
+    }
+    if (e.pointerType === 'mouse' ? inPlot(e.clientX) : ptrs.has(e.pointerId)) showTip(e.clientX);
+    else if (e.pointerType === 'mouse') hideTip();
+  });
+  const release = e => {
+    ptrs.delete(e.pointerId);
+    if (ptrs.size < 2) pinch = null;
+    if (!ptrs.size) { drag = null; svg.classList.remove('panning'); }
+  };
+  svg.addEventListener('pointerup', release);
+  svg.addEventListener('pointercancel', e => { release(e); hideTip(); });
+  svg.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !drag) hideTip(); });
+  svg.addEventListener('dblclick', e => { if (G && inPlot(e.clientX)) { view = null; syncControls(); draw(); } });
+  svg.addEventListener('wheel', e => {
+    if (!G || !inPlot(e.clientX)) return;
+    const dx = e.deltaMode === 1 ? e.deltaX * 16 : e.deltaX, dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+    if (!fs && !e.ctrlKey && !e.metaKey) { if (Math.abs(dy) > 4) toast(/Mac/.test(navigator.platform) ? '按住 ⌘ 或 Ctrl 再滚动可以缩放，或点“全屏”' : '按住 Ctrl 再滚动可以缩放，或点“全屏”'); return; }
+    e.preventDefault();
+    if (fs && !e.ctrlKey && Math.abs(dx) > Math.abs(dy)) { const v = curView(), dt = dx / (G.xr - G.ml) * (v.t1 - v.t0); setView({ t0: v.t0 + dt, t1: v.t1 + dt }); return; }
+    zoomAt(tAt(svgX(svg, G.W, e.clientX)), Math.exp(Math.max(-0.5, Math.min(0.5, dy * 0.002))));
+  }, { passive: false });
+
+  // Overview strip: drag the box to pan, drag its edges to zoom, tap elsewhere to jump there.
+  let navDrag = null;
+  nav.addEventListener('pointerdown', e => {
+    if (!NG) return;
+    const sx = svgX(nav, NG.W, e.clientX), tol = (e.pointerType === 'mouse' ? 6 : 16) * NG.W / nav.getBoundingClientRect().width;
+    let mode;
+    if (Math.abs(sx - NG.x0) <= tol && Math.abs(sx - NG.x0) <= Math.abs(sx - NG.x1)) mode = 'l';
+    else if (Math.abs(sx - NG.x1) <= tol) mode = 'r';
+    else if (sx > NG.x0 && sx < NG.x1) mode = 'm';
+    else { const v = curView(), span = v.t1 - v.t0, Tc = NG.inv(sx); setView({ t0: Tc - span / 2, t1: Tc + span / 2 }); mode = 'm'; }
+    try { nav.setPointerCapture(e.pointerId); } catch (err) {}
+    navDrag = { mode, sx, v: curView() };  // setView above has already moved the window when this was a jump
+    e.preventDefault();
+  });
+  nav.addEventListener('pointermove', e => {
+    if (!NG) return;
+    const sx = svgX(nav, NG.W, e.clientX);
+    if (!navDrag) { nav.style.cursor = Math.min(Math.abs(sx - NG.x0), Math.abs(sx - NG.x1)) <= 6 ? 'ew-resize' : (sx > NG.x0 && sx < NG.x1 ? 'grab' : 'pointer'); return; }
+    const dT = NG.inv(sx) - NG.inv(navDrag.sx), v = navDrag.v, { first } = extent();
+    if (navDrag.mode === 'm') setView({ t0: v.t0 + dT, t1: v.t1 + dT });
+    else if (navDrag.mode === 'l') setView({ t0: Math.max(first, Math.min(v.t0 + dT, v.t1 - MIN_SPAN)), t1: v.t1 });
+    else setView({ t0: v.t0, t1: Math.max(v.t1 + dT, v.t0 + MIN_SPAN) });
+  });
+  const navEnd = () => { navDrag = null; };
+  nav.addEventListener('pointerup', navEnd);
+  nav.addEventListener('pointercancel', navEnd);
+
   let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { draw(); drawTiming(); }, 120); });
+  zoomHint();
   setAsset(current);
 })();
 </script>
