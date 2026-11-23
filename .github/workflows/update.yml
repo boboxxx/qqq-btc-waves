@@ -2,7 +2,9 @@ name: Update wave page
 
 on:
   schedule:
-    - cron: "7,37 * * * *"   # every 30 minutes; GitHub may start scheduled runs a few minutes late
+    # GitHub skips many scheduled runs on small repos (every 30 minutes gave one run every 4-8 hours),
+    # so ask every 10 minutes, off the busy top of the hour; each run takes about 30 seconds
+    - cron: "3,13,23,33,43,53 * * * *"
   workflow_dispatch:
   push:
     branches: [main]
