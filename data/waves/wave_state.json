@@ -9,8 +9,8 @@
   ],
   "flags": [],
   "last": [
-   "2026-11-20",
-   608.45
+   "2026-11-23",
+   651.03
   ],
   "top": [
    "2026-10-06",
@@ -18,8 +18,8 @@
   ],
   "leg": "A",
   "down": true,
-  "state": "running",
-  "summary": "A 浪进行中，内部第 c 段。目前最低收盘 608.45（2026-11-20），比起点下跌 19.9%。确认信号：收盘站上 690.38（A 浪内最后一个反弹高点，2026-11-11）。",
+  "state": "turned",
+  "summary": "A 浪可能已经结束：从 608.45（2026-11-20）反弹超过 5%，等待确认。确认信号：收盘站上 690.38（A 浪内最后一个反弹高点，2026-11-11）。",
   "start": {
    "date": "2026-10-06",
    "label": "5",
@@ -29,7 +29,7 @@
    "date": "2026-11-20",
    "price": 608.45,
    "move": -0.199,
-   "elapsed": 33,
+   "elapsed": 34,
    "elapsed_to_ext": 33,
    "unit": "个交易日"
   },
@@ -49,7 +49,7 @@
   ],
   "cur_sub": "c",
   "turn_level": 638.87,
-  "turned": false,
+  "turned": true,
   "confirm_level": 690.38,
   "confirm_text": "收盘站上 690.38（A 浪内最后一个反弹高点，2026-11-11）",
   "confirm_what": "A 浪内最后一个反弹高点",
@@ -106,91 +106,84 @@
     "ABC=2浪"
    ]
   ],
-  "from_top": -0.199,
+  "from_top": -0.143,
   "levels": [
    {
     "price": 759.66,
     "label": "5 浪顶，向上失效线",
     "kind": "static",
     "side": "below",
-    "dist": 0.2485
+    "dist": 0.1669
    },
    {
     "price": 690.38,
     "label": "确认线：A 浪内最后一个反弹高点（2026-11-11）",
     "kind": "confirm",
     "side": "below",
-    "dist": 0.1347
+    "dist": 0.0604
    },
    {
     "price": 676.49,
     "label": "11-19 盘中高点，A 浪结束的第一个信号",
     "kind": "static",
     "side": "below",
-    "dist": 0.1118
-   },
-   {
-    "price": 638.87,
-    "label": "初步信号：从极值反弹 5%",
-    "kind": "turn",
-    "side": "below",
-    "dist": 0.05
+    "dist": 0.0391
    },
    {
     "price": 635.77,
     "label": "看涨备选的失效线",
     "kind": "static",
-    "side": "below",
-    "dist": 0.0449
+    "side": "above",
+    "dist": -0.0234
    },
    {
     "price": 577.77,
     "label": "c 段 = a 段",
     "kind": "target",
     "side": "above",
-    "dist": -0.0504
+    "dist": -0.1125
    },
    {
     "price": 568.83,
     "label": "整段涨幅 38.2% 回撤",
     "kind": "static",
     "side": "above",
-    "dist": -0.0651
+    "dist": -0.1263
    },
    {
     "price": 558.28,
     "label": "5 浪内部 (ii) 浪低点",
     "kind": "static",
     "side": "above",
-    "dist": -0.0825
+    "dist": -0.1425
    },
    {
     "price": 509.88,
     "label": "整段涨幅 50% 回撤",
     "kind": "static",
     "side": "above",
-    "dist": -0.162
+    "dist": -0.2168
    },
    {
     "price": 508.18,
     "label": "c 段 = 1.618 × a 段",
     "kind": "target",
     "side": "above",
-    "dist": -0.1648
+    "dist": -0.2194
    },
    {
     "price": 450.93,
     "label": "整段涨幅 61.8% 回撤",
     "kind": "static",
     "side": "above",
-    "dist": -0.2589
+    "dist": -0.3074
    },
    {
     "price": 416.06,
     "label": "前一个 4 浪低点",
     "kind": "static",
     "side": "above",
-    "dist": -0.3162
+    "dist": -0.3609
    }
   ],
   "config_sig": "[[\"2026-10-06\", \"5\"]]|0"
