@@ -2,6 +2,7 @@
   "_note": "Human wave count that the tracker follows. Edit only when the count itself changes: 'confirmed' lists pivots already settled (date + label), 'current_leg' is the index in 'legs' of the leg in progress. Prices are read from daily closes on those dates.",
   "QQQ": {
     "ticker": "QQQ",
+    "overnight_proxy": "NQ=F",
     "history_start": "2022-10-01",
     "unit": "sessions",
     "measure": "points",

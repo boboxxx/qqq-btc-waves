@@ -139,6 +139,7 @@ html.fs-lock, html.fs-lock body { overflow: hidden; }
     <div class="prog-head"><h2 style="margin:0">最新进度</h2><span class="foot" id="p-updated"></span></div>
     <p class="prog-summary" id="p-summary"></p>
     <p class="note" id="p-settled" hidden></p>
+    <p class="note" id="p-proxy" hidden></p>
     <div class="cols">
       <div style="display:grid;gap:8px;align-content:start"><h3 class="h3">价位（按高低排列）</h3><div class="tbl-scroll"><table id="p-levels"></table></div></div>
       <div style="display:grid;gap:14px;align-content:start">
@@ -662,7 +663,7 @@ html.fs-lock, html.fs-lock body { overflow: hidden; }
     renderWaveTable();
     const last = RAW[current].last;
     const info = RAW[current].info;
-    document.getElementById('foot').textContent = `数据：Yahoo Finance 日收盘价（QQQ 未按分红调整），截至 ${last[0]}${info.provisional ? '，最后一天是未收盘的实时价' : ''}。浪的转折点取收盘价，与按盘中高低点数出来的会略有出入。历史检验：纳斯达克 100 指数（1985 年起）、BTC-USD（2014-09 起）。页面由 code/wave_tracker.py 生成，更新于 ${RAW[current].updated}。`;
+    document.getElementById('foot').textContent = `数据：Yahoo Finance 日收盘价（QQQ 未按分红调整），截至 ${last[0]}${info.proxy ? `，最后一天是用 NQ 期货（${info.proxy.symbol}）折算的估算价` : info.provisional ? '，最后一天是未收盘的实时价' : ''}。浪的转折点取收盘价，与按盘中高低点数出来的会略有出入。历史检验：纳斯达克 100 指数（1985 年起）、BTC-USD（2014-09 起）。页面由 code/wave_tracker.py 生成，更新于 ${RAW[current].updated}。`;
     renderProgress();
     renderTiming();
   }
@@ -815,15 +816,20 @@ html.fs-lock, html.fs-lock body { overflow: hidden; }
   function renderProgress() {
     const R = RAW[current], st = R.status, a = ASSETS[current], info = R.info;
     document.getElementById('p-updated').textContent = `自动更新于 ${R.updated}；价格时间 ${info.price_time}（${info.tz === 'UTC' ? 'UTC' : '纽约时间'}）`;
-    document.getElementById('p-summary').textContent = (info.provisional ? '按现价（盘中，未收盘）：' : '') + st.summary + (st.flags.length ? ' ' + st.flags.join('；') : '');
+    const plabel = info.label || (info.provisional ? '盘中' : '收盘');
+    document.getElementById('p-summary').textContent = (info.proxy ? '按 NQ 期货折算的估算价（美股未开盘）：' : info.provisional ? '按现价（盘中，未收盘）：' : '') + st.summary + (st.flags.length ? ' ' + st.flags.join('；') : '');
     const ps = document.getElementById('p-settled');
     ps.hidden = !info.provisional;
     if (info.provisional) ps.textContent = `按最近一次收盘（${R.final.last[0]}，${a.fmt(R.final.last[1])}）：${R.final.summary}`;
+    const pp = info.proxy, pn = document.getElementById('p-proxy');
+    pn.hidden = !pp;
+    if (pp) { const mv = (pp.move >= 0 ? '+' : '−') + Math.abs(pp.move * 100).toFixed(2) + '%';
+      pn.textContent = `美股收盘后用纳斯达克 100 期货（NQ 主力合约）估算 QQQ：期货现价 ${pp.price.toLocaleString('en-US')}，QQQ 收盘那一刻（${pp.ref_time.slice(5)}）期货是 ${pp.ref.toLocaleString('en-US')}，之后变动 ${mv}；按同样幅度，${a.fmt(pp.close)} → ${a.fmt(info.price)}。期货报价约延迟 10 分钟；开盘后改用 QQQ 实时价。浪的判断仍只看收盘价。`; }
     const pctTxt = v => (v >= 0 ? '+' : '−') + Math.abs(v * 100).toFixed(1) + '%';
     const kindName = { static: '', target: '目标', confirm: '确认', turn: '初步' };
     let rows = '<tr><th>价位</th><th>含义</th><th>距现价</th></tr>', placed = false;
     const price = info.price;
-    const here = `<tr class="here"><td class="n">${a.fmt(price)}</td><td>现价${info.provisional ? '（盘中）' : '（收盘）'}</td><td class="n"></td></tr>`;
+    const here = `<tr class="here"><td class="n">${a.fmt(price)}</td><td>现价（${plabel}）</td><td class="n"></td></tr>`;
     (st.levels || []).forEach(r => {
       if (!placed && r.price < price) { rows += here; placed = true; }
       rows += `<tr class="${r.kind === 'static' ? '' : 'dyn'}"><td class="n">${a.fmt(r.price)}</td><td class="txt">${kindName[r.kind] ? `<span class="tag${r.kind === 'confirm' ? ' key' : ''}">${kindName[r.kind]}</span>` : ''}${esc(r.label)}</td><td class="n">${pctTxt(r.price / price - 1)}</td></tr>`;

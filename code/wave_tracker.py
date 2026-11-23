@@ -10,7 +10,8 @@ From that point on everything is mechanical and recomputed from closes on every 
 * A and C legs of this correction are invalid above the top; a B leg above the top is flagged for a recount.
 
 Events (leg changes, level crossings, new extremes) are taken from settled daily closes only, so an intraday
-spike cannot trigger them; the page also shows how things stand at the live price.
+spike cannot trigger them; the page also shows how things stand at the live price. Outside regular US hours the
+live QQQ price is estimated from the Nasdaq-100 future (NQ=F): last close x (future now / future at that close).
 
 Usage:
   python code/wave_tracker.py                 # one update: status JSON, event log, page
@@ -80,7 +81,53 @@ def fetch_daily(ticker: str, start: str) -> tuple[pd.Series, dict]:
     if provisional:
         s.iloc[-1] = price
     stamp = pd.Timestamp(int(meta.get("regularMarketTime") or time.time()), unit="s", tz="UTC").tz_convert(tz)
-    return s, {"provisional": bool(provisional), "price": price, "price_time": stamp.strftime("%Y-%m-%d %H:%M"), "tz": tz}
+    return s, {"provisional": bool(provisional), "price": price, "price_time": stamp.strftime("%Y-%m-%d %H:%M"), "tz": tz,
+               "label": "盘中" if provisional else "收盘", "source": ticker}
+
+
+def fetch_intraday(ticker: str) -> tuple[pd.Series, float, pd.Timestamp]:
+    """Five-minute closes (New York time, bar start) for the last ten days, plus the latest price and its time."""
+    r = requests.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}", params={"interval": "5m", "range": "10d"},
+                     headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
+    r.raise_for_status()
+    res = r.json()["chart"]["result"][0]
+    ny = "America/New_York"
+    idx = pd.to_datetime(res["timestamp"], unit="s", utc=True).tz_convert(ny).tz_localize(None)
+    bars = pd.Series(res["indicators"]["quote"][0]["close"], index=idx, dtype="float64").dropna().sort_index()
+    meta = res["meta"]
+    t = pd.Timestamp(int(meta["regularMarketTime"]), unit="s", tz="UTC").tz_convert(ny).tz_localize(None)
+    return bars, float(meta["regularMarketPrice"]), t
+
+
+def overnight_estimate(s: pd.Series, info: dict, proxy: str, now: pd.Timestamp | None = None) -> tuple[pd.Series, dict]:
+    """Outside regular US hours, estimate QQQ from the Nasdaq-100 future (it trades almost round the clock):
+    last QQQ close x (future now / future at that close). The estimate becomes a provisional bar for the next
+    session, so it moves the live view only; settled closes, events and emails never see it."""
+    ny = "America/New_York"
+    now = pd.Timestamp.now(tz=ny).tz_localize(None) if now is None else now
+    if NYSE_DAY.is_on_offset(now.normalize()) and dtime(9, 30) <= now.time() < dtime(16, 15):
+        return s, info  # the market is open: QQQ's own price
+    if info["provisional"]:  # a bar for today before the open is a placeholder, not a close
+        s = s.iloc[:-1]
+    close_day = s.index[-1]
+    close_at = close_day + pd.Timedelta(hours=16)
+    settled_info = {"provisional": False, "price": round(float(s.iloc[-1]), 2), "price_time": close_at.strftime("%Y-%m-%d %H:%M"),
+                    "tz": ny, "label": "收盘", "source": info.get("source", "QQQ")}
+    try:
+        bars, fut, fut_t = fetch_intraday(proxy)
+    except Exception as exc:  # noqa: BLE001 - without the future the page simply shows the last close
+        print(f"{proxy}: download failed, showing the last close: {exc}", file=sys.stderr)
+        return s, settled_info
+    near = bars[(bars.index < close_at) & (bars.index >= close_at - pd.Timedelta(minutes=30))]
+    if near.empty or fut_t <= close_at + pd.Timedelta(minutes=1):
+        return s, settled_info  # no future price at the close, or nothing traded since
+    ref = float(near.iloc[-1])  # the bar that ends at 16:00
+    est = float(s.iloc[-1]) * fut / ref
+    s = pd.concat([s, pd.Series([est], index=[close_day + NYSE_DAY])])
+    return s, {"provisional": True, "price": round(est, 2), "price_time": fut_t.strftime("%Y-%m-%d %H:%M"), "tz": ny,
+               "label": "期货估算", "source": proxy,
+               "proxy": {"symbol": proxy, "price": round(fut, 2), "ref": round(ref, 2), "ref_time": close_at.strftime("%Y-%m-%d %H:%M"),
+                         "move": round(fut / ref - 1, 5), "close": round(float(s.iloc[-2]), 2)}}
 
 
 class Clock:
@@ -504,7 +551,8 @@ def tiles(asset: str, st: dict, info: dict) -> list[list[str]]:
         return [["所处位置", "调整已走完", "需要重新数"]]
     e, dn = st["ext"], st["down"]
     t = [["所处位置", f"{st['leg']} 浪" + ("可能已结束" if st["turned"] else "进行中"), (f"内部第 {st['cur_sub']} 段" if st["cur_sub"] and not st["turned"] else f"从 {st['start']['label']} 浪 {fmt(st['start']['price'])} 起")],
-         ["现价" + ("（盘中）" if info["provisional"] else "（收盘）"), fmt(info["price"]), f"距 5 浪顶 {pct(st['from_top'])}"],
+         [f"现价（{info.get('label') or ('盘中' if info['provisional'] else '收盘')}）", fmt(info["price"]),
+          (f"NQ 期货 {pct(info['proxy']['move'])}，" if info.get("proxy") else "") + f"距 5 浪顶 {pct(st['from_top'])}"],
          [f"本段{'最低' if dn else '最高'}收盘", fmt(e["price"]), f"{e['date']}，本段 {pct(e['move'])}"]]
     if st["confirm_level"]:
         t.append(["确认结束要看", fmt(st["confirm_level"]), "收盘" + ("站上" if dn else "跌破") + f"，距现价 {pct(st['confirm_level'] / info['price'] - 1)}"])
@@ -553,6 +601,8 @@ def run_once(out_dir: Path, send: bool, send_all: bool = False) -> list[dict]:
     for name in ("QQQ", "BTC"):
         cfg = cfg_all[name]
         s, info = fetch_daily(cfg["ticker"], min(cfg["history_start"], cfg["impulse_start"]))
+        if cfg.get("overnight_proxy"):
+            s, info = overnight_estimate(s, info, cfg["overnight_proxy"])
         settled = s.iloc[:-1] if info["provisional"] else s
         final = evaluate(settled, cfg)
         final["levels"] = levels_table(final, cfg, float(settled.iloc[-1]))
@@ -580,7 +630,8 @@ def run_once(out_dir: Path, send: bool, send_all: bool = False) -> list[dict]:
     page = build_page(out_dir, assets)
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     for name, a in assets.items():
-        print(f"[{stamp}] {name} {a['info']['price']:,.2f}{' (live)' if a['info']['provisional'] else ''}: {a['live']['summary']}")
+        tag = f" (from {a['info']['source']})" if a["info"].get("proxy") else (" (live)" if a["info"]["provisional"] else "")
+        print(f"[{stamp}] {name} {a['info']['price']:,.2f}{tag}: {a['live']['summary']}")
     for e in all_events:
         print(f"  EVENT [{e['level']}] {e['text']}")
     key = [e for e in all_events if e["level"] == "key" or (send_all and e["level"] == "notice")]
