@@ -208,8 +208,8 @@
   ],
   "flags": [],
   "last": [
-   "2026-11-24",
-   59747.77
+   "2026-11-25",
+   60378.2
   ],
   "top": [
    "2025-10-06",
@@ -228,7 +228,7 @@
    "date": "2026-11-20",
    "price": 58798.98,
    "move": -0.3211,
-   "elapsed": 64,
+   "elapsed": 65,
    "elapsed_to_ext": 60,
    "unit": "天"
   },
@@ -272,77 +272,77 @@
     "C=A"
    ]
   ],
-  "from_top": -0.5211,
+  "from_top": -0.516,
   "levels": [
    {
     "price": 124752.53,
     "label": "5 浪顶",
     "kind": "static",
     "side": "below",
-    "dist": 1.088
+    "dist": 1.0662
    },
    {
     "price": 86602.91,
     "label": "确认线：B 浪顶，即C 浪起点（2026-09-21）",
     "kind": "confirm",
     "side": "below",
-    "dist": 0.4495
+    "dist": 0.4343
    },
    {
     "price": 73083.5,
     "label": "前一个 4 浪区间上沿（3 浪顶）",
     "kind": "static",
     "side": "below",
-    "dist": 0.2232
+    "dist": 0.2104
    },
    {
     "price": 65854.86,
     "label": "初步信号：从极值反弹 12%",
     "kind": "turn",
     "side": "below",
-    "dist": 0.1022
+    "dist": 0.0907
    },
    {
     "price": 58558.86,
     "label": "A 浪低点",
     "kind": "static",
     "side": "above",
-    "dist": -0.0199
+    "dist": -0.0301
    },
    {
     "price": 58204.89,
     "label": "C = 0.618 × A（按幅度）",
     "kind": "target",
     "side": "above",
-    "dist": -0.0258
+    "dist": -0.036
    },
    {
     "price": 57412.01,
     "label": "整段涨幅 61.8% 回撤",
     "kind": "static",
     "side": "above",
-    "dist": -0.0391
+    "dist": -0.0491
    },
    {
     "price": 53948.75,
     "label": "前一个 4 浪低点",
     "kind": "static",
     "side": "above",
-    "dist": -0.0971
+    "dist": -0.1065
    },
    {
     "price": 45695.0,
     "label": "C=0.618A（按点数）",
     "kind": "static",
     "side": "above",
-    "dist": -0.2352
+    "dist": -0.2432
    },
    {
     "price": 40651.42,
     "label": "C = A（按幅度）",
     "kind": "target",
     "side": "above",
-    "dist": -0.3196
+    "dist": -0.3267
    }
   ],
   "config_sig": "[[\"2025-10-06\", \"5\"], [\"2026-06-30\", \"A\"], [\"2026-09-21\", \"B\"]]|2"
