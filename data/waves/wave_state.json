@@ -9,8 +9,8 @@
   ],
   "flags": [],
   "last": [
-   "2026-11-24",
-   638.1
+   "2026-11-25",
+   633.93
   ],
   "top": [
    "2026-10-06",
@@ -29,7 +29,7 @@
    "date": "2026-11-20",
    "price": 608.45,
    "move": -0.199,
-   "elapsed": 35,
+   "elapsed": 36,
    "elapsed_to_ext": 33,
    "unit": "个交易日"
   },
@@ -106,84 +106,84 @@
     "ABC=2浪"
    ]
   ],
-  "from_top": -0.16,
+  "from_top": -0.1655,
   "levels": [
    {
     "price": 759.66,
     "label": "5 浪顶，向上失效线",
     "kind": "static",
     "side": "below",
-    "dist": 0.1905
+    "dist": 0.1983
    },
    {
     "price": 690.38,
     "label": "确认线：A 浪内最后一个反弹高点（2026-11-11）",
     "kind": "confirm",
     "side": "below",
-    "dist": 0.0819
+    "dist": 0.089
    },
    {
     "price": 676.49,
     "label": "11-19 盘中高点，A 浪结束的第一个信号",
     "kind": "static",
     "side": "below",
-    "dist": 0.0602
+    "dist": 0.0671
    },
    {
     "price": 635.77,
     "label": "看涨备选的失效线",
     "kind": "static",
-    "side": "above",
-    "dist": -0.0037
+    "side": "below",
+    "dist": 0.0029
    },
    {
     "price": 577.77,
     "label": "c 段 = a 段",
     "kind": "target",
     "side": "above",
-    "dist": -0.0945
+    "dist": -0.0886
    },
    {
     "price": 568.83,
     "label": "整段涨幅 38.2% 回撤",
     "kind": "static",
     "side": "above",
-    "dist": -0.1086
+    "dist": -0.1027
    },
    {
     "price": 558.28,
     "label": "5 浪内部 (ii) 浪低点",
     "kind": "static",
     "side": "above",
-    "dist": -0.1251
+    "dist": -0.1193
    },
    {
     "price": 509.88,
     "label": "整段涨幅 50% 回撤",
     "kind": "static",
     "side": "above",
-    "dist": -0.2009
+    "dist": -0.1957
    },
    {
     "price": 508.18,
     "label": "c 段 = 1.618 × a 段",
     "kind": "target",
     "side": "above",
-    "dist": -0.2036
+    "dist": -0.1984
    },
    {
     "price": 450.93,
     "label": "整段涨幅 61.8% 回撤",
     "kind": "static",
     "side": "above",
-    "dist": -0.2933
+    "dist": -0.2887
    },
    {
     "price": 416.06,
     "label": "前一个 4 浪低点",
     "kind": "static",
     "side": "above",
-    "dist": -0.348
+    "dist": -0.3437
    }
   ],
   "config_sig": "[[\"2026-10-06\", \"5\"]]|0"
